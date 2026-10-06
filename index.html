@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DineReserve — Online Restaurant Booking System | Project Proposal</title>
+<style>
+  :root{--ink:#22211f;--sub:#6b675f;--line:#e8e2d8;--bg:#faf7f2;--card:#ffffff;--accent:#c2542b;--accent-soft:#f5e3d8;--green:#3c6e4f}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:Georgia,'Times New Roman',serif;background:var(--bg);color:var(--ink);line-height:1.65}
+  .wrap{max-width:880px;margin:0 auto;padding:0 24px}
+  header{background:#2b2a26;color:#f5efe4;padding:52px 0 40px;border-bottom:6px solid var(--accent)}
+  header .kicker{font-size:13px;letter-spacing:2.5px;text-transform:uppercase;color:#d9c8b4;margin-bottom:10px}
+  header h1{font-size:38px;font-weight:700;line-height:1.2}
+  header p.sub{margin-top:12px;color:#cdc3b2;font-size:16px;max-width:640px}
+  .meta{margin-top:22px;font-size:13.5px;color:#b3a98f}
+  .meta span{display:inline-block;margin-right:22px}
+  .meta b{color:#f0e6d6;font-weight:600}
+  section{padding:38px 0;border-bottom:1px solid var(--line)}
+  h2{font-size:22px;margin-bottom:18px;color:var(--accent)}
+  h2 .no{display:inline-block;background:var(--accent);color:#fff;font-size:14px;width:26px;height:26px;line-height:26px;text-align:center;border-radius:50%;margin-right:10px;vertical-align:2px}
+  p{margin-bottom:12px}
+  ul.clean{list-style:none}
+  ul.clean li{padding:9px 0 9px 30px;position:relative;border-bottom:1px dashed var(--line)}
+  ul.clean li:before{content:"";position:absolute;left:6px;top:17px;width:9px;height:9px;border-radius:2px;background:var(--accent)}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:18px}
+  .card h3{font-size:15px;color:var(--green);margin-bottom:8px;letter-spacing:.4px}
+  table{width:100%;border-collapse:collapse;font-size:14px;background:var(--card)}
+  th{background:var(--accent-soft);color:#5c3017;text-align:left;padding:10px 12px;font-weight:600}
+  td{padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+  .pill{display:inline-block;background:var(--accent-soft);color:#7c3a16;font-size:12px;padding:2px 10px;border-radius:12px;margin:2px 4px 2px 0}
+  .note{background:#fdf6ee;border-left:4px solid var(--accent);padding:12px 16px;font-size:14px;color:#5c5346}
+  footer{background:#2b2a26;color:#b9ad99;text-align:center;padding:26px;font-size:13px}
+  .url{font-family:Consolas,Menlo,monospace;font-size:14px;background:#efe9de;border:1px solid var(--line);border-radius:6px;padding:10px 14px;display:inline-block;margin-top:6px;word-break:break-all}
+  @media(max-width:640px){.grid{grid-template-columns:1fr}header h1{font-size:28px}}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div class="kicker">Software Engineering · Task 1 · Project Proposal</div>
+    <h1>DineReserve</h1>
+    <p class="sub">An online restaurant booking and table management system that helps small and medium-sized restaurants fill more covers, cut no-shows, and own their customer data.</p>
+    <div class="meta">
+      <span><b>Course:</b> Software Project for Course Software Engineering</span>
+      <span><b>Homework:</b> Task1-Project Proposal</span><br>
+      <span><b>Team:</b> 4 students (2 pairs)</span>
+      <span><b>Group No.:</b> G__ (to be filled)</span>
+      <span><b>Date:</b> 2026-10-06</span>
+    </div>
+  </div>
+</header>
+<div class="wrap">
+  <section>
+    <h2><span class="no">1</span>Project Website</h2>
+    <p>This page is the project's web presence for the proposal. The full proposal document (Word template + PDF preview) accompanies this site.</p>
+    <div class="url">https://ycy-ui.github.io/DineReserve/ (GitHub Pages)</div>
+    <p class="note">The project source will be developed in this repository. The proposal document, figures and presentation are maintained under <b>docs/</b>.</p>
+  </section>
+  <section>
+    <h2><span class="no">2</span>Problem We Solve</h2>
+    <p>Independent restaurants still take reservations by phone and paper books. We interviewed owners, hosts and diners and found six recurring pain points:</p>
+    <ul class="clean">
+      <li><b>Phone overload</b> — the line is busy during rushes and bookings are lost.</li>
+      <li><b>Manual allocation errors</b> — tables are promised twice; availability is guessed from memory.</li>
+      <li><b>No-shows</b> — without reminders, guaranteed covers walk away and tables sit empty.</li>
+      <li><b>Late cancellations</b> — no waitlist exists to refill the freed table.</li>
+      <li><b>No operating data</b> — managers cannot see occupancy, peak slots or repeat customers.</li>
+      <li><b>Platform lock-in</b> — aggregators charge per-cover fees and own the customer relationship.</li>
+    </ul>
+  </section>
+  <section>
+    <h2><span class="no">3</span>Proposed Solution</h2>
+    <p><b>DineReserve</b> is a self-hosted web system in which diners check real-time table availability, book in under a minute, join a waitlist and receive automatic reminders, while restaurant staff manage the floor plan, check-ins, no-shows and occupancy reports. The system extends the open-source platform TastyIgniter with new automatic data-processing features: waitlist promotion, scheduled reminders, occupancy reporting and a simple no-show risk score.</p>
+    <div style="margin-top:14px">
+      <span class="pill">Real-time availability</span><span class="pill">1-minute booking</span><span class="pill">SMS/e-mail reminders</span><span class="pill">Waitlist & auto-release</span><span class="pill">Floor-plan manager</span><span class="pill">Occupancy reports</span><span class="pill">No-show risk score</span>
+    </div>
+  </section>
+  <section>
+    <h2><span class="no">4</span>Success Metrics</h2>
+    <table>
+      <tr><th>Metric</th><th>Current practice</th><th>Proposed target</th></tr>
+      <tr><td>No-show rate of booked tables</td><td>Estimated 10–20%</td><td>Below 5%</td></tr>
+      <tr><td>Bookings made online</td><td>None / ad hoc</td><td>At least 70%</td></tr>
+      <tr><td>Time to complete one booking</td><td>3–5 min by phone</td><td>Under 60 seconds</td></tr>
+      <tr><td>Covers recovered from cancelled slots</td><td>0</td><td>+10% on peak slots</td></tr>
+      <tr><td>Booking page response time</td><td>Not measurable</td><td>Under 2 seconds</td></tr>
+    </table>
+  </section>
+  <section>
+    <h2><span class="no">5</span>Team & Product Ownership</h2>
+    <div class="grid">
+      <div class="card"><h3>Pair 1 (A, B)</h3>Customer search & booking flow; waitlist and automatic promotion; reminder/notification service.<br><br><b>Quality:</b> booking under 60 s; page response under 2 s.</div>
+      <div class="card"><h3>Pair 2 (C, D)</h3>Floor-plan & table management; host check-in and walk-in handling; occupancy dashboard & reports.<br><br><b>Quality:</b> usable after 5 min of training; booking data kept confidential.</div>
+    </div>
+  </section>
+  <section>
+    <h2><span class="no">6</span>Plan of Work (14 weeks)</h2>
+    <table>
+      <tr><th>Phase</th><th>Activities</th><th>Weeks</th><th>Depends on</th></tr>
+      <tr><td>P1 Domain study & setup</td><td>Requirements with partner restaurant; fork open-source base; GitHub site</td><td>1–2</td><td>—</td></tr>
+      <tr><td>P2 Core booking</td><td>Availability model & booking engine; floor plan & admin console</td><td>3–5</td><td>P1</td></tr>
+      <tr><td>P3 Automation</td><td>Waitlist & notifications; dashboard reports</td><td>6–9</td><td>P2</td></tr>
+      <tr><td>P4 Intelligence & test</td><td>No-show scoring; integration testing; pilot with partner</td><td>10–12</td><td>P3</td></tr>
+      <tr><td>P5 Delivery</td><td>Fix issues; documentation; demo & presentation</td><td>13–14</td><td>P4</td></tr>
+    </table>
+  </section>
+  <section>
+    <h2><span class="no">7</span>References</h2>
+    <ul class="clean">
+      <li>TastyIgniter — Open Source Restaurant Management Software, GitHub repository. https://github.com/tastyigniter/TastyIgniter</li>
+      <li>Online Restaurant Table Booking System using PHP and MySQL, TIJER, 2024.</li>
+      <li>Smart Restaurant Discovery and Table Reservation System, IJRASET.</li>
+      <li>Restaurant Reservation System, IJSAT, 2025.</li>
+      <li>Predictive Analytics for Appointment Bookings, arXiv:2204.08475, 2022.</li>
+      <li>G. J. Myers, The Art of Software Testing. John Wiley & Sons, 2004.</li>
+    </ul>
+  </section>
+</div>
+<footer>DineReserve · Software Engineering Project Proposal · Macau University of Science and Technology — School of Computer Science and Engineering</footer>
+</body>
+</html>
