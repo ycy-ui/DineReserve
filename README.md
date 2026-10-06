@@ -7,7 +7,7 @@ Software Engineering course project (Task 1 — Project Proposal) · Macau Unive
 ## Project Website
 
 - Repository: https://github.com/ycy-ui/DineReserve
-- GitHub Pages: https://ycy-ui.github.io/DineReserve/ (enable Pages in Settings → Pages → Deploy from branch → main / (root))
+- GitHub Pages: https://ycy-ui.github.io/DineReserve/
 
 ## Problem
 
@@ -37,7 +37,7 @@ A self-hosted web system where diners check real-time availability, book in unde
 ## Team & Ownership
 
 - **Pair 1 (A, B):** customer booking flow, waitlist & promotion, notifications — booking < 60 s, response < 2 s
-- **Pair 2 (C, D):** floor-plan & table management, check-in, dashboards — usable after 5 min training, data confidential
+- **Student C:** floor-plan & table management, check-in, dashboards — usable after 5 min training, data confidential
 
 ## Work Plan (14 weeks)
 
