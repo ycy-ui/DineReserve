@@ -1,0 +1,24 @@
+# PHP / Composer
+/vendor/
+
+# Local database
+*.sqlite
+*.sqlite3
+database/*.local.sql
+
+# Runtime
+.env
+.env.*
+*.log
+storage/logs/
+tmp/
+
+# PHPUnit
+.phpunit.cache/
+.phpunit.result.cache
+
+# IDE / OS
+.DS_Store
+.idea/
+.vscode/
+*.swp
