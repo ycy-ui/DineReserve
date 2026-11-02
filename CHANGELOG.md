@@ -4,6 +4,23 @@ All notable changes to DineReserve are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 weeks refer to the 14-week plan in [`docs/02-architecture.md`](docs/02-architecture.md) and the Task 1 proposal.
 
+## [0.1.1] - 2026-11-02 — CI pipeline and the MySQL dialect fix it found
+
+### Added (W2 · engineering baseline)
+- GitHub Actions pipeline (`.github/workflows/ci.yml`) with three jobs: **PHP 8.2 + PHPUnit + live HTTP
+  smoke test**, **MySQL 8.0 schema apply + seed**, **static demo lint** (`node --check`, HTML/SVG parse,
+  no-external-resource guard). Each job degrades gracefully on the earlier commits of the series and runs
+  its real assertions once the corresponding code exists.
+- Pull-request template that requires the URS requirement id and the verification commands.
+- GitHub project hygiene: 7 milestones, 14 requirement-linked issues, labels for week/area/type.
+
+### Fixed
+- **MySQL 8.0 rejected ISO-8601 timestamps** in `DATETIME` columns with
+  `SQLSTATE[22007] … Incorrect datetime value: '2026-11-02T10:44:10Z'`. `Database::dateTimeFor()` now
+  serialises timestamps as UTC `Y-m-d H:i:s` for MySQL (SQLite keeps the ISO string) and reading a MySQL
+  `DATETIME` is interpreted as UTC before being converted to the restaurant time zone, so the API keeps
+  returning ISO-8601 with an offset. Found and fixed by the new pipeline, not in production.
+
 ## [0.1.0] - 2026-11-02 — Weeks 1–6 (foundation, availability, booking, diner flow)
 
 ### Added (W1 · project setup)
@@ -54,4 +71,5 @@ weeks refer to the 14-week plan in [`docs/02-architecture.md`](docs/02-architect
 - Change/cancel (REQ-1.3), waitlist (REQ-1.5), floor plan (REQ-1.6), reporting (REQ-1.7),
   risk scoring (REQ-1.8) and administration (REQ-1.9) remain planned for W7–W11.
 
+[0.1.1]: https://github.com/ycy-ui/DineReserve/releases/tag/v0.1.1
 [0.1.0]: https://github.com/ycy-ui/DineReserve/releases/tag/v0.1.0
