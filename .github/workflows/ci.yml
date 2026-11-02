@@ -1,0 +1,181 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  php:
+    name: PHP 8.2 · PHPUnit · SQLite
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: pdo_sqlite, sqlite3, mbstring, json, dom, xml, xmlwriter, tokenizer
+          coverage: none
+          tools: composer:v2
+
+      - name: Validate composer.json
+        run: composer validate --no-check-publish
+
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Lint every PHP file
+        run: |
+          set -euo pipefail
+          for dir in src public tests bin bootstrap; do
+            if [ -d "$dir" ]; then
+              find "$dir" -name '*.php' -print0 | xargs -0 -r -n1 php -l
+            fi
+          done
+
+      - name: Run the test suite
+        run: |
+          set -euo pipefail
+          if [ -d tests ] && find tests -name '*Test.php' | grep -q .; then
+            vendor/bin/phpunit --colors=never --do-not-cache-result
+          else
+            echo "No test suite yet - nothing to run (the suite arrives in W3)."
+          fi
+
+      - name: Smoke-test the HTTP API
+        run: |
+          set -euo pipefail
+          if [ ! -f public/index.php ]; then
+            echo "API not implemented yet (arrives in W6) - smoke test skipped."
+            exit 0
+          fi
+          php bin/seed.php database/api-smoke.sqlite
+          DB_PATH=database/api-smoke.sqlite php -S 127.0.0.1:8080 -t public >server.log 2>&1 &
+          for i in $(seq 1 40); do
+            if curl -sf http://127.0.0.1:8080/api/v1/health >/dev/null; then break; fi
+            sleep 0.5
+          done
+          echo "--- health ---"
+          curl -sf http://127.0.0.1:8080/api/v1/health
+          echo "--- availability ---"
+          TARGET_DATE=$(date -d '+7 days' +%F)
+          curl -sf "http://127.0.0.1:8080/api/v1/availability?restaurant_id=1&date=${TARGET_DATE}&time=19:00&party_size=6"
+          echo "--- create booking ---"
+          REFERENCE=$(curl -sf -X POST http://127.0.0.1:8080/api/v1/bookings \
+            -H 'Content-Type: application/json' \
+            -d "{\"restaurant_id\":1,\"table_id\":1,\"date\":\"${TARGET_DATE}\",\"time\":\"19:00\",\"party_size\":2,\"name\":\"CI Bot\",\"email\":\"ci@example.com\",\"idempotency_token\":\"ci-smoke-$(date +%s)\"}" \
+            | tee /dev/stderr | php -r '$d=json_decode(stream_get_contents(STDIN),true); echo $d["booking"]["reference"] ?? "";')
+          if [ -z "$REFERENCE" ]; then echo "booking creation failed"; exit 1; fi
+          echo "--- read booking back ($REFERENCE) ---"
+          curl -sf "http://127.0.0.1:8080/api/v1/bookings/${REFERENCE}?email=ci@example.com"
+          echo
+          echo "API smoke test OK"
+
+  mysql:
+    name: MySQL 8.0 · schema + seed
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: dinereserve
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=12
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: pdo_mysql, mbstring, json
+          coverage: none
+          tools: composer:v2
+
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Apply schema and seed through the application
+        env:
+          DB_HOST: 127.0.0.1
+          DB_DATABASE: dinereserve
+          DB_USERNAME: root
+          DB_PASSWORD: root
+        run: |
+          set -euo pipefail
+          if [ ! -f database/schema-mysql.sql ]; then
+            echo "MySQL schema not present yet (arrives in W3) - skipping."
+            exit 0
+          fi
+          php bin/seed.php --mysql
+          php -r '
+            require "vendor/autoload.php";
+            $pdo = DineReserve\Database::mysql("127.0.0.1", "dinereserve", "root", "root");
+            $tables = (int) $pdo->query("SELECT COUNT(*) FROM tables")->fetchColumn();
+            $periods = (int) $pdo->query("SELECT COUNT(*) FROM service_periods")->fetchColumn();
+            echo "mysql tables={$tables} periods={$periods}\n";
+            if ($tables !== 60 || $periods !== 3) { fwrite(STDERR, "unexpected seed size\n"); exit(1); }
+          '
+
+  demo:
+    name: Static demo · JS/HTML/SVG checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Syntax-check the demo scripts
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          files=(assets/demo/*.js)
+          if [ ${#files[@]} -eq 0 ]; then echo "no demo scripts yet"; exit 0; fi
+          for f in "${files[@]}"; do node --check "$f"; echo "OK $f"; done
+
+      - name: Parse HTML and SVG documents
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import sys, xml.dom.minidom
+          from html.parser import HTMLParser
+
+          for name in ["index.html", "demo.html"]:
+              try:
+                  HTMLParser().feed(open(name, encoding="utf-8").read())
+                  print(f"OK {name}")
+              except FileNotFoundError:
+                  print(f"skip {name} (not present yet)")
+
+          import glob
+          for svg in glob.glob("docs/diagrams/*.svg"):
+              xml.dom.minidom.parse(svg)
+              print(f"OK {svg}")
+          PY
+
+      - name: Ensure the demo has no external dependencies
+        run: |
+          set -euo pipefail
+          if grep -nE '<(script|link|img|source)[^>]*(src|href)="https?://' demo.html index.html 2>/dev/null; then
+            echo "external resources are not allowed in the static demo"; exit 1
+          fi
+          echo "no external resources"
