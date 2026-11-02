@@ -10,6 +10,7 @@ Course project · Macau University of Science and Technology, School of Computer
 
 **Project site:** https://ycy-ui.github.io/DineReserve/
 **Live demo (no install, runs in the browser):** https://ycy-ui.github.io/DineReserve/demo.html
+**October Task 1 site (archived verbatim):** [`docs/archive/project-site-2026-10-06.html`](docs/archive/project-site-2026-10-06.html)
 
 ---
 
