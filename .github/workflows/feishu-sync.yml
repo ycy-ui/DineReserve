@@ -1,0 +1,49 @@
+name: Feishu progress sync
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - docs/progress.json
+      - scripts/sync_feishu.php
+      - .github/workflows/feishu-sync.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: feishu-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    name: Push docs/progress.json into the Feishu Bitable
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: curl, mbstring, json
+          coverage: none
+
+      - name: Lint the sync script
+        run: php -l scripts/sync_feishu.php
+
+      - name: Sync
+        env:
+          FEISHU_APP_ID: ${{ secrets.FEISHU_APP_ID }}
+          FEISHU_APP_SECRET: ${{ secrets.FEISHU_APP_SECRET }}
+          FEISHU_BITABLE_APP_TOKEN: ${{ secrets.FEISHU_BITABLE_APP_TOKEN }}
+          FEISHU_BITABLE_TABLE_ID: ${{ secrets.FEISHU_BITABLE_TABLE_ID }}
+        run: |
+          set -euo pipefail
+          if [ -z "${FEISHU_APP_ID}" ] || [ -z "${FEISHU_APP_SECRET}" ] \
+             || [ -z "${FEISHU_BITABLE_APP_TOKEN}" ] || [ -z "${FEISHU_BITABLE_TABLE_ID}" ]; then
+            echo "::notice title=Feishu sync skipped::Repository secrets FEISHU_APP_ID / FEISHU_APP_SECRET / FEISHU_BITABLE_APP_TOKEN / FEISHU_BITABLE_TABLE_ID are not configured yet. See docs/08-feishu-sync.md."
+            exit 0
+          fi
+          php scripts/sync_feishu.php --ensure-schema

@@ -142,6 +142,14 @@ CI runs three jobs on every push and pull request:
 3. **Static demo** — `node --check` on every demo script, HTML/SVG parse, and a guard that the demo
    loads no external resource.
 
+## Project tracking
+
+Progress is kept in [`docs/progress.json`](docs/progress.json) (one row per week, source of truth) and
+pushed automatically into the team's Feishu **多维表格** by
+[`scripts/sync_feishu.php`](scripts/sync_feishu.php) on every merge to `main`
+(workflow: [`.github/workflows/feishu-sync.yml`](.github/workflows/feishu-sync.yml)).
+Setup, secrets and troubleshooting: [`docs/08-feishu-sync.md`](docs/08-feishu-sync.md).
+
 ## Team and ownership
 
 | Member | Role | Owns |
