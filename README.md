@@ -84,6 +84,10 @@ floor plan (REQ-1.6), reporting (REQ-1.7), risk scoring (REQ-1.8), administratio
 then the non-functional test pass, the pilot service and delivery. See `CHANGELOG.md` and
 `docs/05-traceability.md`.
 
+> **Delivery note:** the W1–W6 deliverables above were produced in **one iteration on 2026-11-02**, not
+> week by week; every commit carries that real date. [`docs/07-delivery-log.md`](docs/07-delivery-log.md)
+> states this plainly and maps each planned week to the artefact that satisfies it.
+
 ## API
 
 | Method | Endpoint | Purpose | Requirement |
