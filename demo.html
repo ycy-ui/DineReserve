@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#14624a">
+<meta name="description" content="DineReserve interactive diner demo — search live table availability, choose a table and confirm a reservation. Runs entirely in the browser and mirrors the PHP booking engine rules.">
+<title>DineReserve — Diner booking demo</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%2314624a'/%3E%3Cpath d='M11 7v6a2 2 0 0 0 2 2h0a2 2 0 0 0 2-2V7M13 15v10M22 7c-1.4 1.5-2 3-2 5v3h4v-3c0-2-.6-3.5-2-5ZM22 15v10' fill='none' stroke='white' stroke-width='1.8' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="assets/demo/styles.css">
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+
+<!-- icon sprite: inline SVG only, no external assets -->
+<svg class="icon-sprite" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <symbol id="i-utensils" viewBox="0 0 24 24"><path d="M7 3v7a2 2 0 0 0 2 2h0a2 2 0 0 0 2-2V3"/><path d="M9 12v9"/><path d="M17 3c-1.5 1.5-2 3-2 5v4h4V8c0-2-.5-3.5-2-5Z"/><path d="M17 12v9"/></symbol>
+  <symbol id="i-star" viewBox="0 0 24 24"><path d="m12 2 3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.77 5.82 21 7 14.14l-5-4.87 6.91-1.01L12 2Z"/></symbol>
+  <symbol id="i-pin" viewBox="0 0 24 24"><path d="M20 10c0 5.5-8 12-8 12S4 15.5 4 10a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+  <symbol id="i-users" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+  <symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+  <symbol id="i-warning" viewBox="0 0 24 24"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h16.9a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></symbol>
+  <symbol id="i-phone" viewBox="0 0 24 24"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2Z"/></symbol>
+  <symbol id="i-bell" viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></symbol>
+  <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.5 9a9 9 0 0 1 14.9-3.4L23 10"/><path d="M1 14l4.6 4.4A9 9 0 0 0 20.5 15"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v5M14 11v5"/></symbol>
+  <symbol id="i-arrow-left" viewBox="0 0 24 24"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></symbol>
+  <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M4 21h16"/></symbol>
+</svg>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="brand">
+      <span class="logo" aria-hidden="true">
+        <svg class="icon" viewBox="0 0 24 24"><use href="#i-utensils"></use></svg>
+      </span>
+      <span class="brand-name">DineReserve</span>
+      <span class="brand-badge">Diner demo</span>
+    </div>
+    <div class="topbar-actions">
+      <span class="timer-chip" id="timer-chip" hidden title="Time since you first checked availability">
+        <svg class="icon" aria-hidden="true"><use href="#i-clock"></use></svg>
+        <span id="timer-value">0 s</span>
+      </span>
+      <button type="button" class="btn btn-small btn-secondary" id="reset-demo" aria-label="Reset demo data">
+        <svg class="icon" aria-hidden="true"><use href="#i-refresh"></use></svg>
+        <span class="btn-label">Reset demo</span>
+      </button>
+    </div>
+  </div>
+</header>
+
+<main id="main" class="wrap">
+  <h1 class="sr-only">DineReserve table booking demo</h1>
+  <div id="live-region" class="sr-only" aria-live="polite" aria-atomic="true"></div>
+
+  <div class="layout">
+    <aside class="venue" aria-labelledby="venue-name">
+      <svg class="venue-art" viewBox="0 0 320 150" role="img" aria-label="Illustration of a restaurant table set for two">
+        <rect width="320" height="150" fill="#e9f1eb"></rect>
+        <circle cx="42" cy="38" r="26" fill="#dfebe3"></circle>
+        <circle cx="282" cy="118" r="34" fill="#dfebe3"></circle>
+        <path d="M160 0v30" stroke="#b9cfc0" stroke-width="2"></path>
+        <circle cx="160" cy="38" r="13" fill="#fbfdfb" stroke="#b9cfc0" stroke-width="2"></circle>
+        <circle cx="160" cy="38" r="5" fill="#f0e2bd"></circle>
+        <ellipse cx="160" cy="100" rx="66" ry="19" fill="#ffffff" stroke="#b9cfc0" stroke-width="2"></ellipse>
+        <path d="M112 100h96" stroke="#dfe9e2" stroke-width="2"></path>
+        <ellipse cx="140" cy="96" rx="15" ry="6" fill="#f7fbf8" stroke="#c4d7cb"></ellipse>
+        <ellipse cx="140" cy="96" rx="8" ry="3" fill="#e6efe8"></ellipse>
+        <ellipse cx="180" cy="96" rx="15" ry="6" fill="#f7fbf8" stroke="#c4d7cb"></ellipse>
+        <ellipse cx="180" cy="96" rx="8" ry="3" fill="#e6efe8"></ellipse>
+        <path d="M124 77v10M196 77v10" stroke="#8fae9b" stroke-width="2" stroke-linecap="round"></path>
+        <path d="M124 77c-3 0-3 6 0 6M196 77c3 0 3 6 0 6" stroke="#8fae9b" stroke-width="1.6" fill="none"></path>
+        <rect x="76" y="84" width="16" height="33" rx="6" fill="#d5e5da" stroke="#b9cfc0" stroke-width="1.6"></rect>
+        <rect x="228" y="84" width="16" height="33" rx="6" fill="#d5e5da" stroke="#b9cfc0" stroke-width="1.6"></rect>
+        <path d="M96 124h128" stroke="#b9cfc0" stroke-width="2" stroke-linecap="round"></path>
+        <path d="M160 52v18" stroke="#b9cfc0" stroke-width="1.6"></path>
+        <circle cx="160" cy="74" r="4" fill="#ffffff" stroke="#b9cfc0" stroke-width="1.6"></circle>
+      </svg>
+      <div class="venue-body">
+        <h2 class="venue-name" id="venue-name">DineReserve Demo Restaurant</h2>
+        <p class="venue-rating">
+          <svg class="icon icon-star" aria-hidden="true"><use href="#i-star"></use></svg>
+          <span>4.8</span>
+          <span class="muted">· 326 reviews · Taipa, Macau</span>
+        </p>
+        <p class="venue-meta">
+          <svg class="icon" aria-hidden="true"><use href="#i-pin"></use></svg>
+          <span>Rua de Nam Keng, Taipa, Macau</span>
+        </p>
+        <p class="venue-meta">
+          <svg class="icon" aria-hidden="true"><use href="#i-clock"></use></svg>
+          <span>Three seatings, 11:30 – 22:00</span>
+        </p>
+        <div class="venue-tags">
+          <span class="tag">60 tables</span>
+          <span class="tag">3 areas</span>
+          <span class="tag">MOP 120–260</span>
+          <span class="tag">English &amp; Chinese</span>
+        </div>
+        <ul class="period-list" id="venue-periods" aria-label="Service periods"></ul>
+      </div>
+    </aside>
+
+    <div class="stage">
+      <!-- ============ SCREEN 1 · search ============ -->
+      <section class="screen" id="screen-search" aria-labelledby="search-heading">
+        <div class="card search-card">
+          <h2 id="search-heading" data-screen-heading tabindex="-1">Find a table</h2>
+          <p class="lead">Live availability for today up to 90 days ahead. Book in less than a minute.</p>
+          <form id="search-form" novalidate>
+            <div class="field-grid">
+              <div class="field">
+                <label for="search-date">Date</label>
+                <input type="date" id="search-date" name="date" autocomplete="off" required>
+              </div>
+              <div class="field">
+                <label for="search-time">Start time</label>
+                <select id="search-time" name="time" required></select>
+              </div>
+              <div class="field">
+                <label for="search-party">Guests</label>
+                <select id="search-party" name="party">
+                  <option value="1">1 guest</option>
+                  <option value="2" selected>2 guests</option>
+                  <option value="3">3 guests</option>
+                  <option value="4">4 guests</option>
+                  <option value="5">5 guests</option>
+                  <option value="6">6 guests</option>
+                  <option value="7">7 guests</option>
+                  <option value="8">8 guests</option>
+                  <option value="9">9 guests</option>
+                  <option value="10">10 guests</option>
+                  <option value="11">11 guests</option>
+                  <option value="12">12 guests</option>
+                  <option value="13">13 guests</option>
+                  <option value="14">14 guests</option>
+                  <option value="15">15 guests</option>
+                  <option value="16">16 guests</option>
+                  <option value="17">17 guests</option>
+                  <option value="18">18 guests</option>
+                  <option value="19">19 guests</option>
+                  <option value="20">20 guests</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="search-area">Seating area <span class="optional">(optional)</span></label>
+                <select id="search-area" name="area">
+                  <option value="">Any area</option>
+                  <option value="main">Main dining room</option>
+                  <option value="window">Window</option>
+                  <option value="terrace">Terrace</option>
+                </select>
+              </div>
+            </div>
+            <p class="hint" id="party-hint" hidden></p>
+            <p class="hint" id="search-hint" role="status"></p>
+            <div class="alert alert-danger" id="search-error" role="alert" tabindex="-1" hidden></div>
+            <button type="submit" class="btn btn-primary btn-block" id="search-submit">Check availability</button>
+          </form>
+          <p class="micro">Static prototype that mirrors the PHP engine rules: 15-minute start times, 15-minute turnover buffer per table, blocked / maintenance tables never offered, half-open conflict detection (back-to-back bookings allowed).</p>
+        </div>
+
+        <div class="card activity-card" aria-labelledby="activity-heading">
+          <div class="card-head">
+            <h2 id="activity-heading">Your demo bookings</h2>
+            <span class="count-badge" id="activity-count">0</span>
+          </div>
+          <p class="hint">Stored in this browser only (<code>dinereserve.demo.bookings.v1</code>). Cancel a booking to release its table, then search again.</p>
+          <ul class="activity-list" id="activity-list"></ul>
+          <p class="empty-copy" id="activity-empty">No bookings yet. Complete the flow to get a reference, cut-off time and two reminders.</p>
+        </div>
+      </section>
+
+      <!-- ============ SCREEN 2 · results ============ -->
+      <section class="screen" id="screen-results" aria-labelledby="results-heading" hidden>
+        <div class="card">
+          <button type="button" class="link-back" id="results-back">
+            <svg class="icon" aria-hidden="true"><use href="#i-arrow-left"></use></svg>
+            Edit search
+          </button>
+          <h2 id="results-heading" data-screen-heading tabindex="-1" class="screen-title">Availability</h2>
+          <p class="lead results-meta" id="results-meta"></p>
+          <div class="result-summary" id="results-summary"></div>
+          <div class="slot-block">
+            <div class="slot-head">
+              <h3>Start times</h3>
+              <span class="hint" id="slot-period-label"></span>
+            </div>
+            <div class="slot-strip" id="results-slots" role="group" aria-label="Start times with available tables"></div>
+          </div>
+        </div>
+
+        <div class="card tables-card" id="results-tables-card">
+          <h3 id="tables-heading">Choose a table</h3>
+          <p class="lead" id="tables-sub"></p>
+          <div id="results-tables"></div>
+          <div class="actions">
+            <button type="button" class="btn btn-primary btn-block" id="table-continue" disabled>Continue to booking</button>
+          </div>
+        </div>
+
+        <div class="card" id="results-empty" hidden>
+          <div class="empty-state">
+            <div class="empty-icon" aria-hidden="true">
+              <svg class="icon"><use href="#i-warning"></use></svg>
+            </div>
+            <h3 id="results-empty-title">No tables for this search</h3>
+            <p id="results-empty-msg"></p>
+            <div class="empty-actions" id="results-empty-actions"></div>
+          </div>
+        </div>
+
+        <div class="card waitlist-card" id="waitlist-panel" hidden aria-labelledby="waitlist-heading">
+          <h3 id="waitlist-heading">Join the waitlist</h3>
+          <p class="lead" id="waitlist-context"></p>
+          <div class="alert alert-danger" id="waitlist-error" role="alert" hidden></div>
+          <div class="alert alert-success" id="waitlist-success" role="status" hidden></div>
+          <form id="waitlist-form" novalidate>
+            <div class="field-grid">
+              <div class="field">
+                <label for="waitlist-name">Full name</label>
+                <input type="text" id="waitlist-name" name="name" autocomplete="name" maxlength="80" required>
+              </div>
+              <div class="field">
+                <label for="waitlist-contact">E-mail or phone</label>
+                <input type="text" id="waitlist-contact" name="contact" autocomplete="email" maxlength="120" required>
+              </div>
+            </div>
+            <div class="actions">
+              <button type="submit" class="btn btn-primary">Join waitlist</button>
+              <button type="button" class="btn btn-secondary" id="waitlist-cancel">Cancel</button>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <!-- ============ SCREEN 3 · booking form ============ -->
+      <section class="screen" id="screen-form" aria-labelledby="form-heading" hidden>
+        <div class="card">
+          <button type="button" class="link-back" id="form-back">
+            <svg class="icon" aria-hidden="true"><use href="#i-arrow-left"></use></svg>
+            Back to tables
+          </button>
+          <h2 id="form-heading" data-screen-heading tabindex="-1" class="screen-title">Your details</h2>
+          <div class="booking-summary" id="form-summary"></div>
+
+          <form id="booking-form" class="booking-form" novalidate>
+            <div class="alert alert-danger" id="form-errors" role="alert" tabindex="-1" hidden></div>
+
+            <div class="field">
+              <label for="bk-name">Full name</label>
+              <input type="text" id="bk-name" name="name" autocomplete="name" maxlength="80" required aria-describedby="err-name">
+              <p class="field-error" id="err-name" hidden></p>
+            </div>
+
+            <div class="field">
+              <label for="bk-email">E-mail</label>
+              <input type="email" id="bk-email" name="email" autocomplete="email" maxlength="254" required aria-describedby="bk-email-hint err-email">
+              <p class="hint" id="bk-email-hint">The confirmation e-mail would be sent here.</p>
+              <p class="field-error" id="err-email" hidden></p>
+            </div>
+
+            <div class="field">
+              <label for="bk-mobile">Mobile <span class="optional">(optional)</span></label>
+              <input type="tel" id="bk-mobile" name="mobile" autocomplete="tel" maxlength="40" aria-describedby="err-mobile">
+              <p class="field-error" id="err-mobile" hidden></p>
+            </div>
+
+            <div class="field">
+              <label for="bk-requests">Special requests <span class="optional">(optional, max 200 characters)</span></label>
+              <textarea id="bk-requests" name="special_requests" rows="3" maxlength="200" aria-describedby="bk-requests-count err-special_requests"></textarea>
+              <p class="counter" id="bk-requests-count">0 / 200</p>
+              <p class="field-error" id="err-special_requests" hidden></p>
+            </div>
+
+            <div class="policy">
+              <input type="checkbox" id="bk-policy" name="policy" aria-describedby="err-policy">
+              <label for="bk-policy">I accept the cancellation policy: free cancellation up to <strong>2 hours</strong> before the reservation start. After the cut-off the booking is chargeable.</label>
+              <p class="field-error" id="err-policy" hidden></p>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-block" id="booking-submit">Confirm booking</button>
+          </form>
+        </div>
+      </section>
+
+      <!-- ============ SCREEN 4 · confirmation ============ -->
+      <section class="screen" id="screen-confirm" aria-labelledby="confirm-heading" hidden>
+        <div class="card ticket">
+          <div class="ticket-top">
+            <span class="success-badge">
+              <svg class="icon" aria-hidden="true"><use href="#i-check"></use></svg>
+              Booking confirmed
+            </span>
+            <h2 id="confirm-heading" data-screen-heading tabindex="-1">You’re booked!</h2>
+            <p class="lead" id="confirm-lead"></p>
+          </div>
+
+          <div class="reference-box">
+            <span class="reference-label">Booking reference</span>
+            <span class="reference" id="confirm-reference"></span>
+            <button type="button" class="btn btn-small btn-secondary" id="copy-reference">
+              <svg class="icon" aria-hidden="true"><use href="#i-copy"></use></svg>
+              Copy
+            </button>
+            <span class="copy-feedback" id="copy-feedback" role="status"></span>
+          </div>
+
+          <dl class="detail-list" id="confirm-body"></dl>
+          <div id="confirm-extra"></div>
+
+          <div class="timer-result" id="confirm-timer"></div>
+
+          <div class="actions">
+            <button type="button" class="btn btn-secondary" id="add-calendar">
+              <svg class="icon" aria-hidden="true"><use href="#i-calendar"></use></svg>
+              Add to calendar
+            </button>
+            <button type="button" class="btn btn-primary" id="book-another">Book another table</button>
+          </div>
+          <p class="micro">This is a static prototype: the booking lives in your browser only. The PHP engine would store it in the database, queue a confirmation e-mail and send the two reminders below.</p>
+        </div>
+      </section>
+    </div>
+  </div>
+</main>
+
+<footer class="footer">
+  <p>Static demo · no account, no server calls · same rules as the PHP booking engine.</p>
+  <p><a href="index.html">← Back to the project site</a> · Data stays in this browser; use “Reset demo” to clear it.</p>
+</footer>
+
+<noscript>
+  <p style="max-width:640px;margin:0 auto;padding:18px;text-align:center;">This demo needs JavaScript enabled. It runs entirely in the browser — no server is involved.</p>
+</noscript>
+
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+<script src="assets/demo/data.js"></script>
+<script src="assets/demo/engine.js"></script>
+<script src="assets/demo/app.js"></script>
+</body>
+</html>

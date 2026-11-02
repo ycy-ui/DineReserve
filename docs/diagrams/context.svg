@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 720" width="1200" height="720" role="img" aria-labelledby="ctxTitle ctxDesc">
+  <title id="ctxTitle">DineReserve system context diagram</title>
+  <desc id="ctxDesc">DineReserve is one system boundary used by four roles through HTTPS and integrated with an SMTP e-mail gateway, an optional SMS gateway, a MySQL database and the GitHub Pages project site.</desc>
+
+  <defs>
+    <marker id="ctxArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#475569"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="1200" height="720" fill="#f8fafc"/>
+  <text x="40" y="44" font-family="Helvetica, Arial, sans-serif" font-size="26" font-weight="bold" fill="#0f172a">DineReserve — System Context Diagram</text>
+  <text x="40" y="70" font-family="Helvetica, Arial, sans-serif" font-size="14" fill="#475569">C4 level 1 · Group 46 · W6 (2026-11-02) · replaces the missing Figure 1 in URS §2.1</text>
+
+  <!-- system boundary -->
+  <rect x="380" y="112" width="430" height="500" rx="20" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="8 6"/>
+  <text x="400" y="138" font-family="Helvetica, Arial, sans-serif" font-size="14" fill="#64748b">System boundary</text>
+
+  <!-- the system -->
+  <rect x="420" y="180" width="350" height="380" rx="24" fill="#e0ecff" stroke="#1d4ed8" stroke-width="1.5"/>
+  <text x="595" y="232" font-family="Helvetica, Arial, sans-serif" font-size="26" font-weight="bold" fill="#1e3a8a" text-anchor="middle">DineReserve</text>
+  <text x="595" y="262" font-family="Helvetica, Arial, sans-serif" font-size="15" fill="#1e3a8a" text-anchor="middle">Online Restaurant Booking</text>
+  <text x="595" y="282" font-family="Helvetica, Arial, sans-serif" font-size="15" fill="#1e3a8a" text-anchor="middle">&amp; Table Management System</text>
+  <line x1="455" y1="300" x2="735" y2="300" stroke="#93c5fd" stroke-width="1.5"/>
+  <text x="595" y="330" font-family="Helvetica, Arial, sans-serif" font-size="13" fill="#1e3a8a" text-anchor="middle">• Availability search (REQ-1.1)</text>
+  <text x="595" y="356" font-family="Helvetica, Arial, sans-serif" font-size="13" fill="#1e3a8a" text-anchor="middle">• Booking engine (REQ-1.2)</text>
+  <text x="595" y="382" font-family="Helvetica, Arial, sans-serif" font-size="13" fill="#1e3a8a" text-anchor="middle">• Change / cancel (REQ-1.3, W7)</text>
+  <text x="595" y="408" font-family="Helvetica, Arial, sans-serif" font-size="13" fill="#1e3a8a" text-anchor="middle">• Notifications (REQ-1.4, W8)</text>
+  <text x="595" y="434" font-family="Helvetica, Arial, sans-serif" font-size="13" fill="#1e3a8a" text-anchor="middle">• Waitlist (REQ-1.5, W9)</text>
+  <text x="595" y="460" font-family="Helvetica, Arial, sans-serif" font-size="13" fill="#1e3a8a" text-anchor="middle">• Floor plan (REQ-1.6, W10)</text>
+  <text x="595" y="486" font-family="Helvetica, Arial, sans-serif" font-size="13" fill="#1e3a8a" text-anchor="middle">• Reporting / risk (REQ-1.7, 1.8, W11)</text>
+  <text x="595" y="512" font-family="Helvetica, Arial, sans-serif" font-size="13" fill="#1e3a8a" text-anchor="middle">• Admin &amp; policies (REQ-1.9, W11)</text>
+
+  <!-- user roles -->
+  <rect x="60" y="130" width="220" height="76" rx="10" fill="#ffffff" stroke="#0f766e" stroke-width="1.5"/>
+  <text x="170" y="158" font-family="Helvetica, Arial, sans-serif" font-size="17" font-weight="bold" fill="#0f766e" text-anchor="middle">Diner</text>
+  <text x="170" y="184" font-family="Helvetica, Arial, sans-serif" font-size="13" fill="#334155" text-anchor="middle">web browser · mobile first</text>
+
+  <rect x="60" y="248" width="220" height="76" rx="10" fill="#ffffff" stroke="#0f766e" stroke-width="1.5"/>
+  <text x="170" y="276" font-family="Helvetica, Arial, sans-serif" font-size="17" font-weight="bold" fill="#0f766e" text-anchor="middle">Host / front desk</text>
+  <text x="170" y="302" font-family="Helvetica, Arial, sans-serif" font-size="13" fill="#334155" text-anchor="middle">staff console · tablet/desktop</text>
+
+  <rect x="60" y="366" width="220" height="76" rx="10" fill="#ffffff" stroke="#0f766e" stroke-width="1.5"/>
+  <text x="170" y="394" font-family="Helvetica, Arial, sans-serif" font-size="17" font-weight="bold" fill="#0f766e" text-anchor="middle">Restaurant manager</text>
+  <text x="170" y="420" font-family="Helvetica, Arial, sans-serif" font-size="13" fill="#334155" text-anchor="middle">dashboard · reports · policies</text>
+
+  <rect x="60" y="484" width="220" height="76" rx="10" fill="#ffffff" stroke="#0f766e" stroke-width="1.5"/>
+  <text x="170" y="512" font-family="Helvetica, Arial, sans-serif" font-size="17" font-weight="bold" fill="#0f766e" text-anchor="middle">Administrator</text>
+  <text x="170" y="538" font-family="Helvetica, Arial, sans-serif" font-size="13" fill="#334155" text-anchor="middle">users · roles · backup</text>
+
+  <!-- role to system -->
+  <line x1="280" y1="168" x2="372" y2="168" stroke="#475569" stroke-width="1.5" marker-end="url(#ctxArrow)"/>
+  <text x="330" y="148" font-family="Helvetica, Arial, sans-serif" font-size="13" fill="#1d4ed8" text-anchor="middle">HTTPS</text>
+  <text x="330" y="163" font-family="Helvetica, Arial, sans-serif" font-size="13" fill="#64748b" text-anchor="middle">REST/JSON</text>
+
+  <line x1="280" y1="286" x2="372" y2="286" stroke="#475569" stroke-width="1.5" marker-end="url(#ctxArrow)"/>
+  <text x="330" y="266" font-family="Helvetica, Arial, sans-serif" font-size="13" fill="#1d4ed8" text-anchor="middle">HTTPS</text>
+  <text x="330" y="281" font-family="Helvetica, Arial, sans-serif" font-size="13" fill="#64748b" text-anchor="middle">REST/JSON</text>
+
+  <line x1="280" y1="404" x2="372" y2="404" stroke="#475569" stroke-width="1.5" marker-end="url(#ctxArrow)"/>
+  <text x="330" y="384" font-family="Helvetica, Arial, sans-serif" font-size="13" fill="#1d4ed8" text-anchor="middle">HTTPS</text>
+  <text x="330" y="399" font-family="Helvetica, Arial, sans-serif" font-size="13" fill="#64748b" text-anchor="middle">REST/JSON</text>
+
+  <line x1="280" y1="522" x2="372" y2="522" stroke="#475569" stroke-width="1.5" marker-end="url(#ctxArrow)"/>
+  <text x="330" y="502" font-family="Helvetica, Arial, sans-serif" font-size="13" fill="#1d4ed8" text-anchor="middle">HTTPS</text>
+  <text x="330" y="517" font-family="Helvetica, Arial, sans-serif" font-size="13" fill="#64748b" text-anchor="middle">REST/JSON</text>
+
+  <!-- external systems -->
+  <rect x="930" y="120" width="220" height="76" rx="10" fill="#ffffff" stroke="#b45309" stroke-width="1.5"/>
+  <text x="1040" y="148" font-family="Helvetica, Arial, sans-serif" font-size="15" font-weight="bold" fill="#92400e" text-anchor="middle">SMTP e-mail gateway</text>
+  <text x="1040" y="174" font-family="Helvetica, Arial, sans-serif" font-size="13" fill="#334155" text-anchor="middle">confirmation · reminders</text>
+
+  <rect x="930" y="238" width="220" height="76" rx="10" fill="#ffffff" stroke="#b45309" stroke-width="1.5" stroke-dasharray="7 5"/>
+  <text x="1040" y="266" font-family="Helvetica, Arial, sans-serif" font-size="15" font-weight="bold" fill="#92400e" text-anchor="middle">SMS gateway (optional)</text>
+  <text x="1040" y="292" font-family="Helvetica, Arial, sans-serif" font-size="13" fill="#334155" text-anchor="middle">optional fallback channel</text>
+
+  <rect x="930" y="356" width="220" height="76" rx="10" fill="#ffffff" stroke="#475569" stroke-width="1.5"/>
+  <text x="1040" y="384" font-family="Helvetica, Arial, sans-serif" font-size="15" font-weight="bold" fill="#334155" text-anchor="middle">MySQL 8 database</text>
+  <text x="1040" y="410" font-family="Helvetica, Arial, sans-serif" font-size="13" fill="#334155" text-anchor="middle">bookings · tables · events</text>
+
+  <rect x="930" y="474" width="220" height="76" rx="10" fill="#ffffff" stroke="#475569" stroke-width="1.5" stroke-dasharray="7 5"/>
+  <text x="1040" y="502" font-family="Helvetica, Arial, sans-serif" font-size="15" font-weight="bold" fill="#334155" text-anchor="middle">GitHub Pages project site</text>
+  <text x="1040" y="528" font-family="Helvetica, Arial, sans-serif" font-size="13" fill="#334155" text-anchor="middle">public demo / project site</text>
+
+  <!-- system to external systems -->
+  <line x1="810" y1="158" x2="922" y2="158" stroke="#475569" stroke-width="1.5" marker-end="url(#ctxArrow)"/>
+  <text x="870" y="140" font-family="Helvetica, Arial, sans-serif" font-size="13" fill="#475569" text-anchor="middle">SMTP over TLS</text>
+  <text x="870" y="154" font-family="Helvetica, Arial, sans-serif" font-size="13" fill="#64748b" text-anchor="middle">e-mail events</text>
+
+  <line x1="810" y1="276" x2="922" y2="276" stroke="#b45309" stroke-width="1.5" stroke-dasharray="7 5" marker-end="url(#ctxArrow)"/>
+  <text x="870" y="258" font-family="Helvetica, Arial, sans-serif" font-size="13" fill="#b45309" text-anchor="middle">HTTPS REST</text>
+  <text x="870" y="272" font-family="Helvetica, Arial, sans-serif" font-size="13" fill="#64748b" text-anchor="middle">(optional)</text>
+
+  <line x1="810" y1="394" x2="922" y2="394" stroke="#475569" stroke-width="1.5" marker-end="url(#ctxArrow)"/>
+  <text x="870" y="376" font-family="Helvetica, Arial, sans-serif" font-size="13" fill="#475569" text-anchor="middle">PDO / SQL</text>
+  <text x="870" y="390" font-family="Helvetica, Arial, sans-serif" font-size="13" fill="#64748b" text-anchor="middle">TLS if supported</text>
+
+  <line x1="810" y1="512" x2="922" y2="512" stroke="#475569" stroke-width="1.5" stroke-dasharray="7 5" marker-end="url(#ctxArrow)"/>
+  <text x="870" y="494" font-family="Helvetica, Arial, sans-serif" font-size="13" fill="#475569" text-anchor="middle">HTTPS</text>
+  <text x="870" y="508" font-family="Helvetica, Arial, sans-serif" font-size="13" fill="#64748b" text-anchor="middle">(publish)</text>
+
+  <!-- legend -->
+  <line x1="60" y1="650" x2="120" y2="650" stroke="#475569" stroke-width="1.5" marker-end="url(#ctxArrow)"/>
+  <text x="132" y="655" font-family="Helvetica, Arial, sans-serif" font-size="13" fill="#334155">synchronous runtime exchange</text>
+  <line x1="390" y1="650" x2="450" y2="650" stroke="#b45309" stroke-width="1.5" stroke-dasharray="7 5" marker-end="url(#ctxArrow)"/>
+  <text x="462" y="655" font-family="Helvetica, Arial, sans-serif" font-size="13" fill="#334155">optional / deferred (SMS channel, static site publication)</text>
+  <text x="60" y="686" font-family="Helvetica, Arial, sans-serif" font-size="13" fill="#64748b">Actors per URS §2.2 · external systems per URS §15.1 · browser/server channel HTTPS with TLS 1.2+ (SEC-1.1)</text>
+  <text x="60" y="706" font-family="Helvetica, Arial, sans-serif" font-size="13" fill="#64748b">Host, Manager and Administrator consoles are planned for W10–W11; W6 delivers the Diner flow (REQ-1.1, REQ-1.2).</text>
+</svg>
