@@ -1,6 +1,6 @@
 # DineReserve — Domain Study Plan and Interview Record
 
-**Document:** `docs/01-domain-study.md` · **Owner:** Stream D (documentation) · **Group:** 46
+**Document:** `docs/01-domain-study.md` · **Owner:** Stream D (documentation) · **Group:** 6
 **Status (2026-11-02, W6):** protocol final; field records pending — the five interview rows and
 the two observation rows below must be filled from the original transcripts before submission.
 **Related artefacts:** [architecture](02-architecture.md) · [traceability](05-traceability.md) ·

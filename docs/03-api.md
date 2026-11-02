@@ -1,6 +1,6 @@
 # DineReserve — HTTP API v1
 
-**Document:** `docs/03-api.md` · **Owner:** Stream D · **Group:** 46
+**Document:** `docs/03-api.md` · **Owner:** Stream D · **Group:** 6
 **Contract status (2026-11-02, W6):** implemented and verified against `public/index.php` plus the
 two services: `src/AvailabilityService.php` (REQ-1.1) and `src/BookingService.php` (REQ-1.2), with
 the shared `src/Database.php`, `src/Slot.php`, `src/Clock.php` and `src/DomainException.php`.

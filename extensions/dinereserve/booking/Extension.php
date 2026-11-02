@@ -26,7 +26,7 @@ class Extension extends BaseExtension
     {
         return [
             'name' => 'DineReserve Booking Engine',
-            'author' => 'DineReserve Group 46',
+            'author' => 'DineReserve Group 6',
             'description' => 'Availability search (REQ-1.1) and booking creation (REQ-1.2).',
             'version' => '0.1.0',
         ];
