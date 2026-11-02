@@ -401,8 +401,8 @@ final class BookingService
             'guest_mobile' => $data['mobile'],
             'special_requests' => $data['special_requests'],
             'channel' => 'online',
-            'cutoff_at' => $cutoffAt,
-            'created_at' => $nowIso,
+            'cutoff_at' => $this->storageDateTime($cutoffAt),
+            'created_at' => $this->storageDateTime($nowIso),
         ];
 
         $this->insertEvent($bookingId, $row, $nowIso);
@@ -449,11 +449,11 @@ final class BookingService
                     $data['mobile'],
                     $data['special_requests'],
                     'online',
-                    $cutoffAt,
+                    $this->storageDateTime($cutoffAt),
                     $data['idempotency_token'],
                     null,
-                    $nowIso,
-                    $nowIso,
+                    $this->storageDateTime($nowIso),
+                    $this->storageDateTime($nowIso),
                 ]);
 
                 return $reference;
@@ -498,7 +498,7 @@ final class BookingService
             'INSERT INTO booking_events (booking_id, event_type, actor, payload, occurred_at)
              VALUES (?, ?, ?, ?, ?)'
         );
-        $statement->execute([$bookingId, 'created', 'diner', $payload, $nowIso]);
+        $statement->execute([$bookingId, 'created', 'diner', $payload, $this->storageDateTime($nowIso)]);
     }
 
     private function insertIdempotencyKey(string $token, int $bookingId, string $nowIso): void
@@ -506,7 +506,7 @@ final class BookingService
         $statement = $this->pdo->prepare(
             'INSERT INTO idempotency_keys (token, booking_id, created_at) VALUES (?, ?, ?)'
         );
-        $statement->execute([$token, $bookingId, $nowIso]);
+        $statement->execute([$token, $bookingId, $this->storageDateTime($nowIso)]);
     }
 
     /** Simulated confirmation e-mail (W8 replaces this with a real outbox). */
@@ -516,7 +516,14 @@ final class BookingService
             'INSERT INTO notification_log (booking_id, channel, template, status, attempts, scheduled_at)
              VALUES (?, ?, ?, ?, ?, ?)'
         );
-        $statement->execute([$bookingId, 'email', 'booking_confirmation', 'QUEUED', 0, $nowIso]);
+        $statement->execute([
+            $bookingId,
+            'email',
+            'booking_confirmation',
+            'QUEUED',
+            0,
+            $this->storageDateTime($nowIso),
+        ]);
     }
 
     /**
@@ -637,6 +644,12 @@ final class BookingService
         ];
     }
 
+    /** Serialise a timestamp for the current database dialect. */
+    private function storageDateTime(string $iso): string
+    {
+        return Database::dateTimeFor($this->pdo, $iso);
+    }
+
     /**
      * Turn a stored timestamp into ISO 8601. SQLite keeps the offset we write;
      * MySQL DATETIME drops it, so it is re-attached from the restaurant zone.
@@ -648,7 +661,10 @@ final class BookingService
         }
 
         try {
-            return Slot::iso8601(new DateTimeImmutable($value, $timezone));
+            // MySQL DATETIME carries no offset and is stored in UTC.
+            $moment = new DateTimeImmutable($value, new DateTimeZone('UTC'));
+
+            return Slot::iso8601($moment->setTimezone($timezone));
         } catch (\Exception) {
             return $value;
         }
