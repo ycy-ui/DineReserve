@@ -1,7 +1,7 @@
 # DineReserve
 
 **An online restaurant booking and table management system.**
-Course project · Macau University of Science and Technology, School of Computer Science and Engineering · Group 46.
+Course project · Macau University of Science and Technology, School of Computer Science and Engineering · Group 6.
 
 [![CI](https://github.com/ycy-ui/DineReserve/actions/workflows/ci.yml/badge.svg)](https://github.com/ycy-ui/DineReserve/actions/workflows/ci.yml)
 ![PHP](https://img.shields.io/badge/PHP-8.1%2B-777bb3)
@@ -149,7 +149,7 @@ CI runs three jobs on every push and pull request:
 ## References
 
 - Task 1 Project Proposal — DineReserve, 2026-10-06.
-- Task 2 User Requirements Specification — DineReserve, Group 46, 2026-10-20 (REQ-1.1 … REQ-1.9, 27 NFRs).
+- Task 2 User Requirements Specification — DineReserve, Group 6, 2026-10-20 (REQ-1.1 … REQ-1.9, 27 NFRs).
 - TastyIgniter, open-source restaurant management software — https://github.com/tastyigniter/TastyIgniter
 - G. J. Myers, *The Art of Software Testing*, John Wiley & Sons, 2004.
 - Predictive Analytics for Appointment Bookings, arXiv:2204.08475, 2022.

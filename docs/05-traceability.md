@@ -1,6 +1,6 @@
 # DineReserve — Requirements Traceability Matrix
 
-**Document:** `docs/05-traceability.md` · **Owner:** Stream D · **Group:** 46
+**Document:** `docs/05-traceability.md` · **Owner:** Stream D · **Group:** 6
 **Snapshot:** 2026-11-02 (end of W5 / start of W6) · **Scope:** URS REQ-1.1 – REQ-1.9 and a
 five-item NFR sample.
 **Related:** [domain study](01-domain-study.md) · [architecture](02-architecture.md) ·

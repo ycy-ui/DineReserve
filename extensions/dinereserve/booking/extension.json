@@ -3,7 +3,7 @@
   "name": "DineReserve Booking Engine",
   "description": "Availability search (REQ-1.1) and booking creation (REQ-1.2) for DineReserve, exposed to TastyIgniter through the framework-agnostic engine in src/.",
   "version": "0.1.0",
-  "author": "DineReserve Group 46",
+  "author": "DineReserve Group 6",
   "require": {
     "tastyigniter/tastyigniter": "^3.7"
   }
