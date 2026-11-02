@@ -105,6 +105,25 @@ final class Database
         return $statements;
     }
 
+    /**
+     * Serialise an ISO-8601 timestamp for storage.
+     *
+     * SQLite keeps TEXT and therefore the offset; MySQL DATETIME rejects both the
+     * "T" separator and the trailing offset, so the value is normalised to UTC
+     * "Y-m-d H:i:s" for that driver (the restaurant time zone is recorded on the
+     * restaurant row, as required by URS REQ-1.2 §7.8).
+     */
+    public static function dateTimeFor(PDO $pdo, string $iso): string
+    {
+        if (self::driver($pdo) !== 'mysql') {
+            return $iso;
+        }
+
+        return (new \DateTimeImmutable($iso))
+            ->setTimezone(new \DateTimeZone('UTC'))
+            ->format('Y-m-d H:i:s');
+    }
+
     public static function isEmpty(PDO $pdo): bool
     {
         $count = (int) $pdo->query('SELECT COUNT(*) FROM restaurants')->fetchColumn();
@@ -120,7 +139,8 @@ final class Database
      */
     public static function seedDemo(PDO $pdo, int $tableCount = 60, ?string $now = null): array
     {
-        $now ??= (new \DateTimeImmutable('now', new \DateTimeZone('UTC')))->format('Y-m-d\TH:i:s\Z');
+        $now ??= (new \DateTimeImmutable('now', new \DateTimeZone('UTC')))->format('Y-m-d\TH:i:sP');
+        $storedNow = self::dateTimeFor($pdo, $now);
 
         $pdo->prepare(
             'INSERT INTO restaurants (name, address, timezone, currency, languages, created_at)
@@ -131,7 +151,7 @@ final class Database
             'Asia/Macau',
             'MOP',
             'en,zh',
-            $now,
+            $storedNow,
         ]);
         $restaurantId = (int) $pdo->lastInsertId();
 
@@ -201,7 +221,7 @@ final class Database
             ['Demo Host', 'host@dinereserve.local'],
             ['Demo Admin', 'admin@dinereserve.local'],
         ] as [$name, $email]) {
-            $insertUser->execute([$restaurantId, $name, $email, $hash, $now]);
+            $insertUser->execute([$restaurantId, $name, $email, $hash, $storedNow]);
         }
 
         return [
