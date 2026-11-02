@@ -12,6 +12,12 @@ Course project · Macau University of Science and Technology, School of Computer
 **Live demo (no install, runs in the browser):** https://ycy-ui.github.io/DineReserve/demo.html
 **October Task 1 site (archived verbatim):** [`docs/archive/project-site-2026-10-06.html`](docs/archive/project-site-2026-10-06.html)
 
+> **About the demo hosting.** The demo is a static page (`demo.html` + `assets/demo/`) that lives in
+> *this* repository; it is also served online from the public mirror at the URL above. GitHub Pages cannot
+> be enabled on the course team repository while it is private on the free plan, so the online instance is
+> hosted from the public mirror instead. Offline, just open `demo.html` from a clone — it has no external
+> dependencies and runs from `file://`.
+
 ---
 
 ## What DineReserve is
