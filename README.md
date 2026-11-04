@@ -85,10 +85,11 @@ The diner demo is plain HTML/JS — just open `demo.html` in a browser, no serve
 | W4 | **REQ-1.1** availability search + 30 s cache + unit tests | `src/AvailabilityService.php` | ✅ |
 | W5 | **REQ-1.2** booking creation: lock, idempotency, reference, cut-off, concurrency test | `src/BookingService.php` | ✅ |
 | W6 | Diner flow demo, HTTP API, context + flow diagrams, API/traceability docs | `demo.html`, `public/`, `docs/` | ✅ |
+| W7 | **REQ-1.3** change / cancel: signed manage link, atomic table move, audit trail, 25 new tests | `src/BookingService.php`, `tests/BookingChangeTest.php` | ✅ |
 
-Weeks 7–14 are planned: change/cancel (REQ-1.3), notifications (REQ-1.4), waitlist (REQ-1.5),
-floor plan (REQ-1.6), reporting (REQ-1.7), risk scoring (REQ-1.8), administration (REQ-1.9),
-then the non-functional test pass, the pilot service and delivery. See `CHANGELOG.md` and
+Weeks 8–14 are planned: notifications (REQ-1.4), waitlist (REQ-1.5), floor plan (REQ-1.6),
+reporting (REQ-1.7), risk scoring (REQ-1.8), administration (REQ-1.9), then the non-functional test
+pass, the pilot service and delivery. See `CHANGELOG.md` and
 `docs/05-traceability.md`.
 
 > **Delivery note:** the W1–W6 deliverables above were produced in **one iteration on 2026-11-02**, not
@@ -104,6 +105,10 @@ then the non-functional test pass, the pilot service and delivery. See `CHANGELO
 | GET | `/api/v1/availability` | `?restaurant_id=1&date=YYYY-MM-DD&time=HH:MM&party_size=N[&area=main]` | REQ-1.1 |
 | POST | `/api/v1/bookings` | create a booking (JSON body) | REQ-1.2 |
 | GET | `/api/v1/bookings/{reference}?email=…` | read a booking (reference + e-mail, URS SEC-1.6) | REQ-1.3 groundwork |
+| POST | `/api/v1/bookings/{reference}/change` | change date / time / party size / table before the cut-off | REQ-1.3 |
+| POST | `/api/v1/bookings/{reference}/cancel` | cancel before the cut-off (idempotent) | REQ-1.3 |
+| POST | `/api/v1/bookings/{reference}/manage-token` | exchange reference + e-mail for a signed manage link | REQ-1.3 |
+| GET | `/api/v1/bookings/{reference}/manage?token=…` | read a booking via its signed link and see the allowed actions | REQ-1.3 |
 
 Full request/response examples and the error-code table: [`docs/03-api.md`](docs/03-api.md).
 The JSON error envelope is always `{"error": {"code", "message", "details"}}`.
