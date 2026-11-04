@@ -42,7 +42,8 @@ The same suite runs on every push and pull request in `.github/workflows/ci.yml`
 | `tests/AvailabilityServiceTest.php` | 30 | 402 | 1.44 s | **REQ-1.1** rules |
 | `tests/BookingServiceTest.php` | 20 | 208 | 0.91 s | **REQ-1.2** rules |
 | `tests/BookingConcurrencyTest.php` | 2 | 18 | 0.23 s | **REQ-1.2** race conditions, real processes |
-| **Total** | **64** | **656** | **3.07 s** | |
+| `tests/BookingChangeTest.php` | 25 | 111 | 1.10 s | **REQ-1.3** change / cancel, signed link, audit |
+| **Total** | **89** | **767** | **4.05 s** | |
 
 Status: **all green**, no warnings, notices or deprecations (`failOnWarning`/`failOnNotice` enabled in
 `phpunit.xml`), so a silent PHP 8.2/8.3 deprecation cannot slip into CI.
@@ -100,11 +101,28 @@ connection and asserts the table/date holds exactly one booking and that `bookin
 `notification_log` and `idempotency_keys` each hold exactly one row. The test is skipped only when
 `pcntl` is unavailable.
 
+## 5b. REQ-1.3 — change / cancel: rule → test
+
+| URS rule (REQ-1.3 §8) | Test(s) |
+|---|---|
+| Diner changes date / time / party size / table before the cut-off | `testChangeMovesTheBookingToANewDateAndTime`, `testChangeWithOnlyPartySizeKeepsTheSlot` |
+| Atomic move: the new table is locked, the old one released in the same transaction | `testChangeToAnotherTableReleasesTheOldOne`, `testChangeToATakenSlotReturnsAlternatives` |
+| An unchanged request is a no-op (no audit row, no timestamp change) | `testUnchangedRequestIsANoOp` |
+| Changes after the stored cut-off are refused and leave the booking intact | `testChangeAfterCutoffIsRejectedAndLeavesTheBookingIntact` |
+| A cancelled booking cannot be changed | `testChangeOfACancelledBookingIsRejected` |
+| Identity: signed manage link, or reference + e-mail (URS SEC-1.6) | `testChangeWithASignedManageLinkWorks`, `testChangeRequiresAnIdentity`, `testChangeWithWrongEmailLooksLikeANotFoundBooking` |
+| Signed links are tamper-proof and expire | `testTamperedManageTokenIsRejected`, `testExpiredManageTokenIsRejected`, `testManageTokenRoundTripReportsTheExpiry`, `testManageTokenForAnotherBookingIsRejected` |
+| Validation of the new slot (blocked table, past slot, window, capacity, conflicts) | `testChangeToABlockedTableIsRejected`, `testChangeToAPastSlotIsRejected`, `testChangeOutsideTheBookingWindowIsRejected`, `testChangeToAPartyTooLargeForTheTableIsRejected`, `testChangeToATakenSlotReturnsAlternatives`, `testChangeValidatesEveryField` |
+| Cancellation releases the table and writes an audit row + notice | `testCancelMarksTheBookingCancelledAndReleasesTheTable`, `testCancelWithASignedManageLinkWorks` |
+| Cancelling twice is idempotent | `testCancelIsIdempotent` |
+| Cancellation after the cut-off is refused | `testCancelAfterCutoffIsRejected` |
+
 ## 6. Not covered yet (honest list)
 
 | Item | Status | Planned |
 |---|---|---|
-| REQ-1.3 change/cancel, REQ-1.4 notifications, REQ-1.5 waitlist, REQ-1.6 floor plan, REQ-1.7 reporting, REQ-1.8 risk score, REQ-1.9 administration | not implemented | W7–W11 |
+| REQ-1.4 notifications, REQ-1.5 waitlist, REQ-1.6 floor plan, REQ-1.7 reporting, REQ-1.8 risk score, REQ-1.9 administration | not implemented | W8–W11 |
+| Notifications for change/cancel are only queued in `notification_log` (template rows); delivery and reminder rescheduling arrive with REQ-1.4 | queued only | W8 |
 | **PERF-1.1 … PERF-1.8** response-time measurements | only the availability/booking path is unit-tested, no load test yet | W12 (k6, 95th percentile) |
 | **SEC-1.1 … SEC-1.7** (TLS, hashing, session expiry, OWASP Top 10) | password hashing is used for the demo accounts; no formal review yet | W12 |
 | **AVA-1.1 … AVA-1.5** (99.5 % availability, backup + restore drill) | not applicable to a unit suite; needs the pilot deployment | W12–W13 |

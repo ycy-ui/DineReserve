@@ -4,6 +4,26 @@ All notable changes to DineReserve are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 weeks refer to the 14-week plan in [`docs/02-architecture.md`](docs/02-architecture.md) and the Task 1 proposal.
 
+## [0.2.0] - 2026-11-04 — Week 7: change or cancel a booking (REQ-1.3)
+
+### Added (W7 · REQ-1.3)
+- `BookingService::change()` — moves a confirmed booking to another date, time, party size or table in
+  one transaction: the target table is locked and re-checked under the lock, the booking row is updated,
+  and the old table is released by that same update, so a failed change never loses the original booking.
+- `BookingService::cancel()` — cancels before the stored cut-off, releases the table and is idempotent
+  (a second cancellation returns `cancelled: false` and writes no second audit row).
+- Cut-off enforcement: changes/cancellations after `cutoff_at` are refused with `CUTOFF_PASSED` and the
+  restaurant's contact details instead of failing silently.
+- Signed self-service manage links: `issueManageToken()` / `verifyManageToken()` — HMAC-SHA256 over
+  reference + expiry, 72 h TTL, tamper and expiry detection (`TOKEN_INVALID` / `TOKEN_EXPIRED`).
+  Identity is either the signed link or reference + booking e-mail (URS SEC-1.6).
+- Audit trail: every transition appends a `booking_events` row (`changed` with before/after values,
+  `cancelled` with the released slot), and a notice row is queued in `notification_log`
+  (`booking_changed` / `booking_cancelled`) for W8 to deliver.
+- HTTP API: `POST /api/v1/bookings/{reference}/change`, `POST …/cancel`, `POST …/manage-token`,
+  `GET …/manage?token=…`; booking responses now carry `manage_token` and `manage_url`.
+- 25 new tests (89 total / 767 assertions).
+
 ## [0.1.1] - 2026-11-02 — CI pipeline and the MySQL dialect fix it found
 
 ### Added (W2 · engineering baseline)
@@ -71,5 +91,6 @@ weeks refer to the 14-week plan in [`docs/02-architecture.md`](docs/02-architect
 - Change/cancel (REQ-1.3), waitlist (REQ-1.5), floor plan (REQ-1.6), reporting (REQ-1.7),
   risk scoring (REQ-1.8) and administration (REQ-1.9) remain planned for W7–W11.
 
+[0.2.0]: https://github.com/ycy-ui/DineReserve/releases/tag/v0.2.0
 [0.1.1]: https://github.com/ycy-ui/DineReserve/releases/tag/v0.1.1
 [0.1.0]: https://github.com/ycy-ui/DineReserve/releases/tag/v0.1.0

@@ -255,3 +255,34 @@ Coverage expected for W4/W5:
 - No new Composer dependencies in W1–W6 (keeps CI fast and the licence constraint of URS 3.1 satisfied).
 - All money/dates: `YYYY-MM-DD`, `HH:MM`, ISO 8601 timestamps with offset; text UTF-8.
 - Every public method that can reject input throws `DomainException` — never `exit`/`die`.
+
+## 10. REQ-1.3 — change or cancel a booking (W7, implemented)
+
+```php
+// src/BookingService.php
+public function change(array $input): array;   // ['booking' => [...], 'changed' => bool, 'changes' => ['date','time',...]]
+public function cancel(array $input): array;   // ['booking' => [...], 'cancelled' => bool]
+public function issueManageToken(string $reference, int $ttlHours = 72): string;
+public function verifyManageToken(string $token): array; // ['reference' => 'K7MQ4P2X', 'expires_at' => '...']
+```
+
+**Identity** — every call carries `reference` plus either `manage_token` (signed link) or `email`
+(the address used at booking time). A missing identity is `AUTHORIZATION_REQUIRED` (403); a wrong
+e-mail or an unknown reference both answer with the same `NOT_FOUND` (404) so the reference cannot be
+probed (URS SEC-1.6).
+
+**Rules** — the booking must be `CONFIRMED` (`BOOKING_CANCELLED` / `BOOKING_NOT_EDITABLE`, 409) and
+`now <= cutoff_at` (`CUTOFF_PASSED`, 422, details include the cut-off). `change()` locks both the old
+and the new table (ascending id order), re-runs every slot rule of REQ-1.2 under the lock and performs a
+single `UPDATE` that moves the booking; the old table is released by that update, so a failed change
+leaves the original booking untouched. `cancel()` sets `CANCELLED`, releases the table and is idempotent.
+Every transition appends a `booking_events` row (`changed` with before/after, `cancelled` with the
+released slot) and queues a `notification_log` row for W8.
+
+**Manage token** — `base64url("REF.<expires_at>.<hmac_sha256(REF.expires_at, secret)>")`, secret from
+`BOOKING_LINK_SECRET` (documented development fallback), TTL 72 h, validated with `hash_equals`.
+`TOKEN_INVALID` (403) for a malformed/tampered token, `TOKEN_EXPIRED` (403) after expiry.
+
+**HTTP** — `POST /api/v1/bookings/{reference}/change`, `POST …/cancel`, `POST …/manage-token`,
+`GET …/manage?token=…` (returns the booking plus `manage.can_change` / `manage.can_cancel`).
+Booking payloads now include `manage_token` and `manage_url`.

@@ -105,6 +105,39 @@ function respondError(int $status, string $code, string $message, array $details
     respond(['error' => ['code' => $code, 'message' => $message, 'details' => $details]], $status);
 }
 
+/** Absolute base URL of this API, used to build signed manage links. */
+function baseUrl(): string
+{
+    $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+    $host = (string) ($_SERVER['HTTP_HOST'] ?? '127.0.0.1:8080');
+
+    return $scheme . '://' . $host;
+}
+
+/** The signed self-service link a confirmation e-mail would carry (REQ-1.3 8.6). */
+function manageUrl(string $reference, string $token): string
+{
+    return baseUrl() . '/api/v1/bookings/' . $reference . '/manage?token=' . rawurlencode($token);
+}
+
+/**
+ * Attach the signed manage link to a booking payload.
+ *
+ * @param array<string,mixed> $payload
+ * @return array<string,mixed>
+ */
+function withManageLink(BookingService $bookings, array $payload): array
+{
+    if (($payload['reference'] ?? '') === '') {
+        return $payload;
+    }
+    $token = $bookings->issueManageToken((string) $payload['reference']);
+    $payload['manage_token'] = $token;
+    $payload['manage_url'] = manageUrl((string) $payload['reference'], $token);
+
+    return $payload;
+}
+
 /** @return array<string,mixed> */
 function bookingPayload(PDO $pdo, array $row): array
 {
@@ -159,6 +192,10 @@ try {
                     'GET /api/v1/availability?restaurant_id=1&date=YYYY-MM-DD&time=HH:MM&party_size=N[&area=main]',
                     'POST /api/v1/bookings',
                     'GET /api/v1/bookings/{reference}?email=...',
+                    'POST /api/v1/bookings/{reference}/change',
+                    'POST /api/v1/bookings/{reference}/cancel',
+                    'POST /api/v1/bookings/{reference}/manage-token',
+                    'GET /api/v1/bookings/{reference}/manage?token=...',
                 ],
                 'documentation' => 'docs/03-api.md',
             ]);
@@ -225,6 +262,7 @@ try {
                 respondError(400, 'MALFORMED_JSON', 'The request body must be a JSON object.');
             }
             $result = $bookings->create($input);
+            $result['booking'] = withManageLink($bookings, $result['booking']);
             respond($result, $result['created'] ? 201 : 200);
 
         case preg_match('#^/api/v1/bookings/([A-Z2-9]{8})$#', $path, $matches) === 1 && $method === 'GET':
@@ -237,7 +275,74 @@ try {
             if ($row === false || $email === '' || strtolower($row['guest_email']) !== $email) {
                 throw DomainException::notFound('Booking not found.');
             }
-            respond(bookingPayload($pdo, $row));
+            $payload = bookingPayload($pdo, $row);
+            $payload['booking'] = withManageLink($bookings, $payload['booking']);
+            respond($payload);
+
+        case preg_match('#^/api/v1/bookings/([A-Z2-9]{8})/change$#', $path, $matches) === 1 && $method === 'POST':
+            $input = json_decode(file_get_contents('php://input') ?: '[]', true);
+            if (!is_array($input)) {
+                respondError(400, 'MALFORMED_JSON', 'The request body must be a JSON object.');
+            }
+            $input['reference'] = $matches[1];
+            $result = $bookings->change($input);
+            $result['booking'] = withManageLink($bookings, $result['booking']);
+            respond($result);
+
+        case preg_match('#^/api/v1/bookings/([A-Z2-9]{8})/cancel$#', $path, $matches) === 1 && $method === 'POST':
+            $input = json_decode(file_get_contents('php://input') ?: '[]', true);
+            if (!is_array($input)) {
+                respondError(400, 'MALFORMED_JSON', 'The request body must be a JSON object.');
+            }
+            $input['reference'] = $matches[1];
+            $result = $bookings->cancel($input);
+            $result['booking'] = withManageLink($bookings, $result['booking']);
+            respond($result);
+
+        case preg_match('#^/api/v1/bookings/([A-Z2-9]{8})/manage-token$#', $path, $matches) === 1 && $method === 'POST':
+            $input = json_decode(file_get_contents('php://input') ?: '[]', true);
+            if (!is_array($input)) {
+                respondError(400, 'MALFORMED_JSON', 'The request body must be a JSON object.');
+            }
+            $email = strtolower(trim((string) ($input['email'] ?? '')));
+            $stmt = $pdo->prepare('SELECT * FROM bookings WHERE reference = ?');
+            $stmt->execute([$matches[1]]);
+            $row = $stmt->fetch();
+            if ($row === false || $email === '' || strtolower((string) $row['guest_email']) !== $email) {
+                throw DomainException::notFound('Booking not found.');
+            }
+            $token = $bookings->issueManageToken((string) $row['reference']);
+            respond([
+                'reference' => (string) $row['reference'],
+                'manage_token' => $token,
+                'manage_url' => manageUrl((string) $row['reference'], $token),
+                'expires_in_hours' => BookingService::MANAGE_TOKEN_TTL_HOURS,
+            ]);
+
+        case preg_match('#^/api/v1/bookings/([A-Z2-9]{8})/manage$#', $path, $matches) === 1 && $method === 'GET':
+            $token = (string) ($_GET['token'] ?? '');
+            $claims = $bookings->verifyManageToken($token);
+            if ($claims['reference'] !== $matches[1]) {
+                throw DomainException::notFound('Booking not found.');
+            }
+            $stmt = $pdo->prepare('SELECT * FROM bookings WHERE reference = ?');
+            $stmt->execute([$matches[1]]);
+            $row = $stmt->fetch();
+            if ($row === false) {
+                throw DomainException::notFound('Booking not found.');
+            }
+            $payload = bookingPayload($pdo, $row);
+            $status = (string) $payload['booking']['status'];
+            $cutoff = new DateTimeImmutable((string) $payload['booking']['cutoff_at']);
+            $now = new DateTimeImmutable('now', new DateTimeZone('Asia/Macau'));
+            $editable = $status === 'CONFIRMED' && $now <= $cutoff;
+            $payload['manage'] = [
+                'can_change' => $editable,
+                'can_cancel' => $editable,
+                'actions' => $editable ? ['change', 'cancel'] : [],
+                'expires_at' => $claims['expires_at'],
+            ];
+            respond($payload);
 
         default:
             throw new DomainException('ROUTE_NOT_FOUND', sprintf('No route for %s %s.', $method, $path), [], 404);

@@ -867,4 +867,590 @@ final class BookingService
         return $this->isUniqueViolation($exception)
             && stripos($exception->getMessage(), 'reference') !== false;
     }
+
+    // ==================================================================
+    // REQ-1.3 — change or cancel a booking (W7)
+    // ==================================================================
+
+    /** How long a signed self-service manage link stays valid. */
+    public const MANAGE_TOKEN_TTL_HOURS = 72;
+
+    /** HMAC secret for manage links; production must set this env var. */
+    public const MANAGE_SECRET_ENV = 'BOOKING_LINK_SECRET';
+
+    /** Development fallback so the demo/tests work without configuration. */
+    private const MANAGE_SECRET_FALLBACK = 'dinereserve-development-manage-secret';
+
+    /**
+     * Change the date, time, party size or table of a confirmed booking
+     * (URS REQ-1.3), up to the cut-off stored with the booking.
+     *
+     * Runs in one transaction: the new table is locked and re-checked, the
+     * booking row is moved, and the old table is only released by that update,
+     * so the diner never loses the original booking if the new slot fails.
+     *
+     * @param array<string,mixed> $input reference + (manage_token | email) + optional date/time/party_size/table_id
+     * @return array{booking:array<string,mixed>,changed:bool,changes:list<string>}
+     * @throws DomainException
+     */
+    public function change(array $input): array
+    {
+        $reference = strtoupper(trim((string) ($input['reference'] ?? '')));
+        if ($reference === '') {
+            throw DomainException::validation(['reference' => 'A booking reference is required.']);
+        }
+
+        $bookingId = 0;
+        $oldDate = '';
+        $newDate = '';
+        $restaurantId = 0;
+        $timezone = new DateTimeZone('UTC');
+        $changes = [];
+
+        try {
+            $this->beginWriteTransaction();
+
+            $booking = $this->authoriseBooking($input, $reference);
+            $bookingId = (int) $booking['id'];
+            $restaurantId = (int) $booking['restaurant_id'];
+            $restaurant = $this->fetchRestaurant($restaurantId);
+            if ($restaurant === false) {
+                throw DomainException::notFound('Restaurant not found.');
+            }
+            $timezone = new DateTimeZone((string) $restaurant['timezone']);
+
+            $this->assertEditable($booking);
+            $this->assertBeforeCutoff($booking, $timezone);
+
+            $target = $this->resolveChangeTarget($input, $booking);
+            $changedFields = [];
+            foreach ([
+                'date' => (string) $booking['booking_date'],
+                'time' => (string) $booking['start_time'],
+                'party_size' => (int) $booking['party_size'],
+                'table_id' => (int) $booking['table_id'],
+            ] as $field => $current) {
+                if ($target[$field] !== $current) {
+                    $changedFields[] = $field;
+                }
+            }
+            $changes = $changedFields;
+
+            if ($changedFields === []) {
+                $this->commit();
+                $unchanged = $this->fetchBooking($bookingId);
+                $unchangedTable = $this->fetchTable((int) $booking['table_id']);
+
+                return [
+                    'booking' => $this->buildBookingPayload($unchanged ?: $booking, $unchangedTable ?: [], $timezone),
+                    'changed' => false,
+                    'changes' => [],
+                ];
+            }
+
+            // Lock both tables in id order so concurrent changes cannot deadlock.
+            $lockedTables = [];
+            $driver = Database::driver($this->pdo);
+            $tableIds = array_values(array_unique([(int) $booking['table_id'], $target['table_id']]));
+            sort($tableIds);
+            foreach ($tableIds as $tableId) {
+                $table = $this->fetchTableForUpdate($tableId, $driver);
+                if ($table === false || (int) $table['restaurant_id'] !== $restaurantId) {
+                    throw DomainException::notFound('The selected table does not exist in this restaurant.');
+                }
+                $lockedTables[$tableId] = $table;
+            }
+
+            $targetTable = $lockedTables[$target['table_id']];
+            if ((string) $targetTable['status'] !== 'FREE') {
+                throw new DomainException(
+                    'TABLE_UNAVAILABLE',
+                    'The selected table is not available for booking.',
+                    ['table_id' => $target['table_id'], 'status' => (string) $targetTable['status']],
+                    409
+                );
+            }
+            if ($target['party_size'] > (int) $targetTable['seats']) {
+                throw new DomainException(
+                    'PARTY_TOO_LARGE',
+                    $this->withTelephoneHint(
+                        'The selected table does not seat this many guests; please call the restaurant to book a larger table.'
+                    ),
+                    $this->partyTooLargeDetails([
+                        'table_id' => $target['table_id'],
+                        'party_size' => $target['party_size'],
+                        'max_party_size' => (int) $targetTable['seats'],
+                    ]),
+                    422
+                );
+            }
+
+            $slot = $this->resolveSlot(
+                $restaurantId,
+                $timezone,
+                $target['date'],
+                $target['time'],
+                $target['party_size'],
+                $target['table_id'],
+                $bookingId
+            );
+
+            $nowIso = Slot::iso8601($this->clock->now()->setTimezone($timezone));
+            $oldDate = (string) $booking['booking_date'];
+            $newDate = $target['date'];
+
+            $statement = $this->pdo->prepare(
+                'UPDATE bookings
+                    SET table_id = ?, booking_date = ?, start_time = ?, end_time = ?,
+                        party_size = ?, cutoff_at = ?, updated_at = ?
+                  WHERE id = ?'
+            );
+            $statement->execute([
+                $target['table_id'],
+                $target['date'],
+                $target['time'],
+                $slot['end'],
+                $target['party_size'],
+                $this->storageDateTime($slot['cutoff_at']),
+                $this->storageDateTime($nowIso),
+                $bookingId,
+            ]);
+
+            $this->insertLifecycleEvent($bookingId, 'changed', 'diner', [
+                'reference' => $reference,
+                'changed_fields' => $changedFields,
+                'before' => [
+                    'table_id' => (int) $booking['table_id'],
+                    'date' => (string) $booking['booking_date'],
+                    'start' => (string) $booking['start_time'],
+                    'end' => (string) $booking['end_time'],
+                    'party_size' => (int) $booking['party_size'],
+                    'cutoff_at' => (string) $booking['cutoff_at'],
+                ],
+                'after' => [
+                    'table_id' => $target['table_id'],
+                    'date' => $target['date'],
+                    'start' => $target['time'],
+                    'end' => $slot['end'],
+                    'party_size' => $target['party_size'],
+                    'cutoff_at' => $slot['cutoff_at'],
+                ],
+            ], $nowIso);
+
+            $this->insertLifecycleNotification($bookingId, 'booking_changed', $nowIso);
+
+            $this->commit();
+        } catch (Throwable $exception) {
+            $this->rollBack();
+
+            throw $exception;
+        }
+
+        $this->invalidateQuietly($restaurantId, $oldDate);
+        if ($newDate !== '' && $newDate !== $oldDate) {
+            $this->invalidateQuietly($restaurantId, $newDate);
+        }
+
+        $row = $this->fetchBooking($bookingId);
+        $tableRow = $this->fetchTable((int) ($row['table_id'] ?? 0));
+
+        return [
+            'booking' => $this->buildBookingPayload($row ?: [], $tableRow ?: [], $timezone),
+            'changed' => true,
+            'changes' => $changes,
+        ];
+    }
+
+    /**
+     * Cancel a confirmed booking (URS REQ-1.3). Idempotent: cancelling an
+     * already cancelled booking returns the booking with cancelled=false.
+     *
+     * @param array<string,mixed> $input reference + (manage_token | email) + optional reason
+     * @return array{booking:array<string,mixed>,cancelled:bool}
+     * @throws DomainException
+     */
+    public function cancel(array $input): array
+    {
+        $reference = strtoupper(trim((string) ($input['reference'] ?? '')));
+        if ($reference === '') {
+            throw DomainException::validation(['reference' => 'A booking reference is required.']);
+        }
+
+        $bookingId = 0;
+        $restaurantId = 0;
+        $date = '';
+        $timezone = new DateTimeZone('UTC');
+        $cancelled = false;
+
+        try {
+            $this->beginWriteTransaction();
+
+            $booking = $this->authoriseBooking($input, $reference);
+            $bookingId = (int) $booking['id'];
+            $restaurantId = (int) $booking['restaurant_id'];
+            $date = (string) $booking['booking_date'];
+            $restaurant = $this->fetchRestaurant($restaurantId);
+            if ($restaurant === false) {
+                throw DomainException::notFound('Restaurant not found.');
+            }
+            $timezone = new DateTimeZone((string) $restaurant['timezone']);
+
+            if (strtoupper((string) $booking['status']) !== 'CANCELLED') {
+                $this->assertEditable($booking);
+                $this->assertBeforeCutoff($booking, $timezone);
+
+                $nowIso = Slot::iso8601($this->clock->now()->setTimezone($timezone));
+                $statement = $this->pdo->prepare(
+                    "UPDATE bookings SET status = 'CANCELLED', updated_at = ? WHERE id = ?"
+                );
+                $statement->execute([$this->storageDateTime($nowIso), $bookingId]);
+
+                $this->insertLifecycleEvent($bookingId, 'cancelled', 'diner', [
+                    'reference' => $reference,
+                    'previous_status' => (string) $booking['status'],
+                    'reason' => isset($input['reason']) ? trim((string) $input['reason']) : null,
+                    'released_table_id' => (int) $booking['table_id'],
+                    'released_slot' => [
+                        'date' => (string) $booking['booking_date'],
+                        'start' => (string) $booking['start_time'],
+                        'end' => (string) $booking['end_time'],
+                    ],
+                ], $nowIso);
+
+                $this->insertLifecycleNotification($bookingId, 'booking_cancelled', $nowIso);
+                $cancelled = true;
+            }
+
+            $this->commit();
+        } catch (Throwable $exception) {
+            $this->rollBack();
+
+            throw $exception;
+        }
+
+        $this->invalidateQuietly($restaurantId, $date);
+
+        $row = $this->fetchBooking($bookingId);
+        $tableRow = $this->fetchTable((int) ($row['table_id'] ?? 0));
+
+        return [
+            'booking' => $this->buildBookingPayload($row ?: [], $tableRow ?: [], $timezone),
+            'cancelled' => $cancelled,
+        ];
+    }
+
+    /** Signed, expiring self-service link token for a booking (REQ-1.3 8.6). */
+    public function issueManageToken(string $reference, int $ttlHours = self::MANAGE_TOKEN_TTL_HOURS): string
+    {
+        $expires = $this->clock->now()->modify('+' . $ttlHours . ' hours')->getTimestamp();
+        $payload = strtoupper(trim($reference)) . '.' . $expires . '.' . $this->signManageToken($reference, $expires);
+
+        return rtrim(strtr(base64_encode($payload), '+/', '-_'), '=');
+    }
+
+    /**
+     * @return array{reference:string,expires_at:string}
+     * @throws DomainException
+     */
+    public function verifyManageToken(string $token): array
+    {
+        $token = trim($token);
+        $raw = $token === '' ? false : base64_decode(strtr($token, '-_', '+/'), true);
+        if ($raw === false) {
+            throw $this->invalidManageToken();
+        }
+
+        $parts = explode('.', $raw);
+        if (count($parts) !== 3) {
+            throw $this->invalidManageToken();
+        }
+        [$reference, $expires, $mac] = $parts;
+        if (!preg_match('/^\d+$/', $expires) || !hash_equals($this->signManageToken($reference, (int) $expires), (string) $mac)) {
+            throw $this->invalidManageToken();
+        }
+        if ($this->clock->now()->getTimestamp() > (int) $expires) {
+            throw new DomainException(
+                'TOKEN_EXPIRED',
+                'This manage link has expired; please open the booking with the reference and e-mail instead.',
+                ['expired_at' => gmdate('Y-m-d\TH:i:s\Z', (int) $expires)],
+                403
+            );
+        }
+
+        return ['reference' => $reference, 'expires_at' => gmdate('Y-m-d\TH:i:s\Z', (int) $expires)];
+    }
+
+    private function signManageToken(string $reference, int $expires): string
+    {
+        $secret = getenv(self::MANAGE_SECRET_ENV);
+        if (!is_string($secret) || trim($secret) === '') {
+            $secret = self::MANAGE_SECRET_FALLBACK;
+        }
+
+        return hash_hmac('sha256', strtoupper($reference) . '.' . $expires, $secret);
+    }
+
+    private function invalidManageToken(): DomainException
+    {
+        return new DomainException(
+            'TOKEN_INVALID',
+            'This manage link is not valid.',
+            [],
+            403
+        );
+    }
+
+    /**
+     * Resolve the caller identity: a valid signed manage token, or the booking
+     * reference together with the e-mail used at booking time (URS SEC-1.6).
+     *
+     * @param array<string,mixed> $input
+     * @return array<string,mixed> booking row
+     */
+    private function authoriseBooking(array $input, string $reference): array
+    {
+        $token = isset($input['manage_token']) ? trim((string) $input['manage_token']) : '';
+        $email = isset($input['email']) ? strtolower(trim((string) $input['email'])) : '';
+
+        if ($token === '' && $email === '') {
+            throw new DomainException(
+                'AUTHORIZATION_REQUIRED',
+                'Provide the signed manage link, or the booking reference together with the e-mail used at booking time.',
+                [],
+                403
+            );
+        }
+
+        if ($token !== '') {
+            $claims = $this->verifyManageToken($token);
+            if ($claims['reference'] !== $reference) {
+                throw DomainException::notFound('Booking not found.');
+            }
+        }
+
+        $statement = $this->pdo->prepare('SELECT * FROM bookings WHERE reference = ?');
+        $statement->execute([$reference]);
+        $row = $statement->fetch(PDO::FETCH_ASSOC);
+        if ($row === false) {
+            throw DomainException::notFound('Booking not found.');
+        }
+
+        if ($token === '') {
+            // Same generic message for unknown reference and mismatched e-mail.
+            if (strtolower((string) $row['guest_email']) !== $email) {
+                throw DomainException::notFound('Booking not found.');
+            }
+        }
+
+        return $row;
+    }
+
+    /** @param array<string,mixed> $booking */
+    private function assertEditable(array $booking): void
+    {
+        $status = strtoupper((string) $booking['status']);
+        if ($status === 'CANCELLED') {
+            throw new DomainException(
+                'BOOKING_CANCELLED',
+                'This booking has already been cancelled.',
+                ['status' => $status],
+                409
+            );
+        }
+        if ($status !== 'CONFIRMED') {
+            throw new DomainException(
+                'BOOKING_NOT_EDITABLE',
+                'Only a confirmed booking can be changed or cancelled.',
+                ['status' => $status],
+                409
+            );
+        }
+    }
+
+    /** @param array<string,mixed> $booking */
+    private function assertBeforeCutoff(array $booking, DateTimeZone $timezone): void
+    {
+        $cutoff = new DateTimeImmutable($this->iso8601FromDatabase((string) $booking['cutoff_at'], $timezone));
+        $now = $this->clock->now()->setTimezone($timezone);
+        if ($now > $cutoff) {
+            throw new DomainException(
+                'CUTOFF_PASSED',
+                $this->withTelephoneHint(
+                    'The change/cancellation cut-off for this booking has passed; please call the restaurant.'
+                ),
+                ['cutoff_at' => Slot::iso8601($cutoff)],
+                422
+            );
+        }
+    }
+
+    /**
+     * Validate the requested new values and fall back to the current booking
+     * for any field the caller did not send.
+     *
+     * @param array<string,mixed> $input
+     * @param array<string,mixed> $booking
+     * @return array{date:string,time:string,party_size:int,table_id:int}
+     */
+    private function resolveChangeTarget(array $input, array $booking): array
+    {
+        $errors = [];
+
+        $date = isset($input['date']) ? trim((string) $input['date']) : (string) $booking['booking_date'];
+        if (!Slot::isValidDate($date)) {
+            $errors['date'] = 'The date must be a real date in YYYY-MM-DD format.';
+        }
+
+        $time = isset($input['time']) ? trim((string) $input['time']) : (string) $booking['start_time'];
+        if (!Slot::isValidTime($time)) {
+            $errors['time'] = 'The time must be in HH:MM format.';
+        }
+
+        $partySize = isset($input['party_size'])
+            ? $this->positiveIntOrNull($input['party_size'])
+            : (int) $booking['party_size'];
+        if ($partySize === null || $partySize < 1 || $partySize > self::MAX_PARTY_SIZE) {
+            $errors['party_size'] = 'Choose between 1 and ' . self::MAX_PARTY_SIZE . ' guests.';
+        }
+
+        $tableId = isset($input['table_id'])
+            ? $this->positiveIntOrNull($input['table_id'])
+            : (int) $booking['table_id'];
+        if ($tableId === null || $tableId < 1) {
+            $errors['table_id'] = 'Choose a table from the availability list.';
+        }
+
+        if ($errors !== []) {
+            throw DomainException::validation($errors);
+        }
+
+        return [
+            'date' => $date,
+            'time' => $time,
+            'party_size' => (int) $partySize,
+            'table_id' => (int) $tableId,
+        ];
+    }
+
+    /**
+     * Validate that a table can be booked for a slot (date window, service
+     * period, closing time, past check, and no overlapping booking).
+     *
+     * @return array{end:string,cutoff_at:string}
+     */
+    private function resolveSlot(
+        int $restaurantId,
+        DateTimeZone $timezone,
+        string $date,
+        string $time,
+        int $partySize,
+        int $tableId,
+        ?int $ignoreBookingId = null
+    ): array {
+        $now = $this->clock->now()->setTimezone($timezone);
+        $today = $now->format('Y-m-d');
+        $lastBookableDate = $now->modify('+' . Slot::MAX_DAYS_AHEAD . ' days')->format('Y-m-d');
+        if ($date < $today || $date > $lastBookableDate) {
+            throw new DomainException(
+                'DATE_OUT_OF_RANGE',
+                sprintf('Bookings can be made between %s and %s.', $today, $lastBookableDate),
+                ['min' => $today, 'max' => $lastBookableDate],
+                422
+            );
+        }
+
+        $period = $this->findServicePeriod($restaurantId, $time);
+        if ($period === null) {
+            throw new DomainException(
+                'NO_SERVICE_PERIOD',
+                'The restaurant does not serve at the selected time.',
+                ['periods' => $this->servicePeriods($restaurantId)],
+                422
+            );
+        }
+
+        $slotMinutes = (int) $period['avg_dining_minutes'] + Slot::TURNOVER_BUFFER_MINUTES;
+        if (Slot::minutes($time) + $slotMinutes > Slot::minutes((string) $period['end_time'])) {
+            $latestStart = Slot::addMinutes((string) $period['end_time'], -$slotMinutes);
+
+            throw new DomainException(
+                'NO_SERVICE_PERIOD',
+                'The restaurant closes before this sitting would end. The latest bookable start is ' . $latestStart . '.',
+                ['requested_time' => $time, 'latest_start' => $latestStart],
+                422
+            );
+        }
+
+        $start = Slot::at($date, $time, $timezone);
+        if ($start <= $now) {
+            throw new DomainException(
+                'SLOT_IN_PAST',
+                'The selected time is in the past.',
+                ['date' => $date, 'time' => $time, 'now' => Slot::iso8601($now)],
+                422
+            );
+        }
+
+        $endTime = Slot::addMinutes($time, $slotMinutes);
+        if (!$this->availability->isTableFree($tableId, $date, $time, $endTime, $ignoreBookingId)) {
+            $alternatives = $this->alternativeTables([
+                'restaurant_id' => $restaurantId,
+                'date' => $date,
+                'time' => $time,
+                'party_size' => $partySize,
+                'table_id' => $tableId,
+            ]);
+
+            throw DomainException::tableTaken($tableId, $alternatives);
+        }
+
+        return [
+            'end' => $endTime,
+            'cutoff_at' => Slot::iso8601($start->modify('-' . Slot::DEFAULT_CUTOFF_MINUTES . ' minutes')),
+        ];
+    }
+
+    /**
+     * Append an audit row for a lifecycle transition (REQ-1.3 8.8).
+     *
+     * @param array<string,mixed> $payload
+     */
+    private function insertLifecycleEvent(int $bookingId, string $type, string $actor, array $payload, string $nowIso): void
+    {
+        $statement = $this->pdo->prepare(
+            'INSERT INTO booking_events (booking_id, event_type, actor, payload, occurred_at)
+             VALUES (?, ?, ?, ?, ?)'
+        );
+        $statement->execute([
+            $bookingId,
+            $type,
+            $actor,
+            json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR),
+            $this->storageDateTime($nowIso),
+        ]);
+    }
+
+    /** Queue the change/cancellation notice; W8 replaces this with a real outbox. */
+    private function insertLifecycleNotification(int $bookingId, string $template, string $nowIso): void
+    {
+        $statement = $this->pdo->prepare(
+            'INSERT INTO notification_log (booking_id, channel, template, status, attempts, scheduled_at)
+             VALUES (?, ?, ?, ?, ?, ?)'
+        );
+        $statement->execute([$bookingId, 'email', $template, 'QUEUED', 0, $this->storageDateTime($nowIso)]);
+    }
+
+    private function invalidateQuietly(int $restaurantId, string $date): void
+    {
+        if ($restaurantId < 1 || $date === '') {
+            return;
+        }
+
+        try {
+            $this->availability->invalidate($restaurantId, $date);
+        } catch (Throwable) {
+            // A cache hiccup must never undo a committed change/cancellation.
+        }
+    }
+
 }

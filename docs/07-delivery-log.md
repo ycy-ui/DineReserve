@@ -62,7 +62,7 @@ weeks left in the original window (assuming W1 started 2026-09-29, W14 would end
 
 | Week | Dates | Scope | Tracking |
 |---|---|---|---|
-| W7 | 2026-11-03 → 11-09 | **REQ-1.3** change / cancel a booking (signed link, atomic move, audit trail) | [#7](https://github.com/ycy-ui/DineReserve/issues/7) |
+| W7 | 2026-11-03 → 11-09 | **REQ-1.3** change / cancel a booking (signed link, atomic move, audit trail) — **done 2026-11-04**, 25 tests | [#7](https://github.com/ycy-ui/DineReserve/issues/7) |
 | W8 | 2026-11-10 → 11-16 | **REQ-1.4** confirmation, 24 h / 2 h reminders, retries, notification log | [#8](https://github.com/ycy-ui/DineReserve/issues/8) |
 | W9 | 2026-11-17 → 11-23 | **REQ-1.5** waitlist with 5-minute automatic offers | [#9](https://github.com/ycy-ui/DineReserve/issues/9) |
 | W10 | 2026-11-24 → 11-30 | **REQ-1.6** floor plan and table-status management | [#10](https://github.com/ycy-ui/DineReserve/issues/10) |
