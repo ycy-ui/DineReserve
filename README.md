@@ -86,13 +86,13 @@ The diner demo is plain HTML/JS — just open `demo.html` in a browser, no serve
 | W5 | **REQ-1.2** booking creation: lock, idempotency, reference, cut-off, concurrency test | `src/BookingService.php` | ✅ |
 | W6 | Diner flow demo, HTTP API, context + flow diagrams, API/traceability docs | `demo.html`, `public/`, `docs/` | ✅ |
 | W7 | **REQ-1.3** change / cancel: signed manage link, atomic table move, audit trail, 25 new tests | `src/BookingService.php`, `tests/BookingChangeTest.php` | ✅ |
+| W8 | **REQ-1.4** confirmation, 24 h / 2 h reminders, 1/5/15 min retries, `notification_log` pipeline | `src/NotificationService.php`, `bin/notify.php` | ✅ |
 
-Weeks 8–14 are planned: notifications (REQ-1.4), waitlist (REQ-1.5), floor plan (REQ-1.6),
-reporting (REQ-1.7), risk scoring (REQ-1.8), administration (REQ-1.9), then the non-functional test
-pass, the pilot service and delivery. See `CHANGELOG.md` and
+Weeks 9–14 are planned: waitlist (REQ-1.5), floor plan (REQ-1.6), reporting (REQ-1.7), risk scoring
+(REQ-1.8), administration (REQ-1.9), then the non-functional test pass, the pilot service and delivery. See `CHANGELOG.md` and
 `docs/05-traceability.md`.
 
-> **Delivery note:** the W1–W6 deliverables above were produced in **one iteration on 2026-11-02**, not
+> **Delivery note:** the W1–W8 deliverables above were produced in **one iteration on 2026-11-02**, not
 > week by week; every commit carries that real date. [`docs/07-delivery-log.md`](docs/07-delivery-log.md)
 > states this plainly and maps each planned week to the artefact that satisfies it.
 
@@ -109,6 +109,8 @@ pass, the pilot service and delivery. See `CHANGELOG.md` and
 | POST | `/api/v1/bookings/{reference}/cancel` | cancel before the cut-off (idempotent) | REQ-1.3 |
 | POST | `/api/v1/bookings/{reference}/manage-token` | exchange reference + e-mail for a signed manage link | REQ-1.3 |
 | GET | `/api/v1/bookings/{reference}/manage?token=…` | read a booking via its signed link and see the allowed actions | REQ-1.3 |
+| POST | `/api/v1/notifications/dispatch` | deliver every due notification (dev/cron entry point) | REQ-1.4 |
+| GET | `/api/v1/notifications/due` | list the notifications that are due now | REQ-1.4 |
 
 Full request/response examples and the error-code table: [`docs/03-api.md`](docs/03-api.md).
 The JSON error envelope is always `{"error": {"code", "message", "details"}}`.

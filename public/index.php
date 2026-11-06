@@ -15,6 +15,8 @@ use DineReserve\AvailabilityService;
 use DineReserve\BookingService;
 use DineReserve\Database;
 use DineReserve\DomainException;
+use DineReserve\FileMailer;
+use DineReserve\NotificationService;
 use DineReserve\SystemClock;
 
 $root = dirname(__DIR__);
@@ -72,6 +74,13 @@ try {
 $clock = new SystemClock((string) (getenv('RESTAURANT_TIMEZONE') ?: 'Asia/Macau'));
 $availability = new AvailabilityService($pdo, $clock);
 $bookings = new BookingService($pdo, $availability, $clock);
+$notifications = new NotificationService(
+    $pdo,
+    new FileMailer((string) (getenv('MAIL_LOG_PATH') ?: $root . '/storage/mail.log')),
+    $clock,
+    static fn (string $reference): string => $bookings->issueManageToken($reference)
+);
+$bookings->setNotifications($notifications);
 
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Headers: Content-Type');
@@ -196,6 +205,8 @@ try {
                     'POST /api/v1/bookings/{reference}/cancel',
                     'POST /api/v1/bookings/{reference}/manage-token',
                     'GET /api/v1/bookings/{reference}/manage?token=...',
+                    'POST /api/v1/notifications/dispatch',
+                    'GET /api/v1/notifications/due',
                 ],
                 'documentation' => 'docs/03-api.md',
             ]);
@@ -343,6 +354,16 @@ try {
                 'expires_at' => $claims['expires_at'],
             ];
             respond($payload);
+
+        case $path === '/api/v1/notifications/dispatch' && $method === 'POST':
+            $input = json_decode(file_get_contents('php://input') ?: '[]', true);
+            $limit = is_array($input) ? (int) ($input['limit'] ?? 50) : 50;
+            respond(['summary' => $notifications->dispatch($limit > 0 ? $limit : 50)]);
+
+        case $path === '/api/v1/notifications/due' && $method === 'GET':
+            $limit = (int) ($_GET['limit'] ?? 50);
+            $due = $notifications->due($limit > 0 ? $limit : 50);
+            respond(['due' => count($due), 'notifications' => $due]);
 
         default:
             throw new DomainException('ROUTE_NOT_FOUND', sprintf('No route for %s %s.', $method, $path), [], 404);
