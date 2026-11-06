@@ -4,6 +4,22 @@ All notable changes to DineReserve are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 weeks refer to the 14-week plan in [`docs/02-architecture.md`](docs/02-architecture.md) and the Task 1 proposal.
 
+## [0.3.0] - 2026-11-06 — Week 8: notifications (REQ-1.4)
+
+### Added (W8 · REQ-1.4)
+- `NotificationService`: queues the confirmation, the 24 h and the 2 h reminders for a booking, renders
+  the five templates (`booking_confirmation`, `booking_reminder_24h`, `booking_reminder_2h`,
+  `booking_changed`, `booking_cancelled`) and delivers everything that is due.
+- Delivery port `Mailer` with a dependency-free `FileMailer` (writes `storage/mail.log`); the test suite
+  binds an in-memory double, so the whole pipeline runs in CI without SMTP credentials.
+- Retry policy: a failed delivery is re-scheduled after **1 / 5 / 15 minutes** and becomes `FAILED`
+  after the fourth attempt, with `last_error` recorded for triage.
+- Reminders follow the booking: `change()` cancels the old reminders and queues new ones,
+  `cancel()` cancels the pending reminders, and a cancelled booking never receives a reminder.
+- `bin/notify.php` — cron entry point with `--limit` and `--dry-run`; `POST /api/v1/notifications/dispatch`
+  and `GET /api/v1/notifications/due` expose the same queue over HTTP.
+- 16 new tests (105 total / 844 assertions).
+
 ## [0.2.0] - 2026-11-04 — Week 7: change or cancel a booking (REQ-1.3)
 
 ### Added (W7 · REQ-1.3)
@@ -91,6 +107,7 @@ weeks refer to the 14-week plan in [`docs/02-architecture.md`](docs/02-architect
 - Change/cancel (REQ-1.3), waitlist (REQ-1.5), floor plan (REQ-1.6), reporting (REQ-1.7),
   risk scoring (REQ-1.8) and administration (REQ-1.9) remain planned for W7–W11.
 
+[0.3.0]: https://github.com/ycy-ui/DineReserve/releases/tag/v0.3.0
 [0.2.0]: https://github.com/ycy-ui/DineReserve/releases/tag/v0.2.0
 [0.1.1]: https://github.com/ycy-ui/DineReserve/releases/tag/v0.1.1
 [0.1.0]: https://github.com/ycy-ui/DineReserve/releases/tag/v0.1.0

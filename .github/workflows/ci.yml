@@ -81,6 +81,44 @@ jobs:
           echo
           echo "API smoke test OK"
 
+      - name: Smoke-test the notification pipeline
+        run: |
+          set -euo pipefail
+          if [ ! -f src/NotificationService.php ]; then
+            echo "Notifications not implemented yet (arrives in W8) - smoke test skipped."
+            exit 0
+          fi
+          php bin/seed.php database/notify-smoke.sqlite
+          echo "--- dry run (empty queue) ---"
+          php bin/notify.php --dry-run database/notify-smoke.sqlite
+          echo "--- queue a booking, then deliver it ---"
+          php -r '
+            require "bootstrap/autoload.php";
+            $pdo = \DineReserve\Database::sqlite("database/notify-smoke.sqlite");
+            $clock = new \DineReserve\SystemClock("Asia/Macau");
+            $bookings = new \DineReserve\BookingService($pdo, new \DineReserve\AvailabilityService($pdo, $clock), $clock);
+            $notifications = new \DineReserve\NotificationService(
+                $pdo,
+                new \DineReserve\FileMailer("storage/mail.log"),
+                $clock,
+                fn (string $ref): string => $bookings->issueManageToken($ref)
+            );
+            $bookings->setNotifications($notifications);
+            $date = (new DateTimeImmutable("+7 days", new DateTimeZone("Asia/Macau")))->format("Y-m-d");
+            $bookings->create([
+                "restaurant_id" => 1, "table_id" => 1, "date" => $date, "time" => "19:00",
+                "party_size" => 2, "name" => "CI Notify", "email" => "ci@example.com",
+            ]);
+            $summary = $notifications->dispatch();
+            fwrite(STDERR, "dispatch: " . json_encode($summary) . PHP_EOL);
+            $rows = (int) $pdo->query("SELECT COUNT(*) FROM notification_log")->fetchColumn();
+            if ($summary["sent"] < 1 || $rows < 3) {
+                fwrite(STDERR, "expected a confirmation plus two reminders, got " . $rows . " rows" . PHP_EOL);
+                exit(1);
+            }
+            echo "notification smoke OK (" . $rows . " rows)" . PHP_EOL;
+          '
+
   mysql:
     name: MySQL 8.0 · schema + seed
     runs-on: ubuntu-latest

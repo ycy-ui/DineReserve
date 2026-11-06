@@ -116,14 +116,14 @@
       "task": "确认信 / 24h / 2h 提醒 / 退避重试 / 通知日志",
       "requirement": "REQ-1.4",
       "owner": "王恩泽",
-      "status": "未开始",
+      "status": "已完成",
       "planned_start": "2026-11-10",
       "planned_end": "2026-11-16",
-      "actual_done": null,
-      "progress": 0,
-      "artifact": "待建：notification 扩展",
-      "link": "Issue #8",
-      "note": ""
+      "actual_done": "2026-11-06",
+      "progress": 1,
+      "artifact": "src/NotificationService.php、src/Mailer.php、src/FileMailer.php、bin/notify.php、tests/NotificationServiceTest.php、public/index.php",
+      "link": "PR #27",
+      "note": "16 tests；确认信 + 24h/2h 提醒 + 1/5/15 分钟重试"
     },
     {
       "week": "W9",

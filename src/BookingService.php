@@ -68,6 +68,12 @@ final class BookingService
         $this->availability = $availability ?? new AvailabilityService($pdo, $this->clock);
     }
 
+    /** Bind the REQ-1.4 notification pipeline (optional; tests may omit it). */
+    public function setNotifications(NotificationService $notifications): void
+    {
+        $this->notifications = $notifications;
+    }
+
     /**
      * @param array<string,mixed> $input
      *
@@ -129,6 +135,9 @@ final class BookingService
         } catch (Throwable) {
             // A stale availability cache must never undo a confirmed booking.
         }
+
+        // REQ-1.4: queue the 24 h / 2 h reminders next to the confirmation row.
+        $this->notifications?->scheduleRemindersForBooking((int) $booking['id']);
 
         return ['booking' => $booking, 'created' => true];
     }
@@ -882,6 +891,13 @@ final class BookingService
     private const MANAGE_SECRET_FALLBACK = 'dinereserve-development-manage-secret';
 
     /**
+     * Optional notification pipeline (REQ-1.4). When bound, creating, changing
+     * and cancelling a booking also keeps the reminder queue in sync.
+     */
+    private ?NotificationService $notifications = null;
+
+
+    /**
      * Change the date, time, party size or table of a confirmed booking
      * (URS REQ-1.3), up to the cut-off stored with the booking.
      *
@@ -1051,6 +1067,9 @@ final class BookingService
             $this->invalidateQuietly($restaurantId, $newDate);
         }
 
+        // REQ-1.4: reminders follow the new slot; the old ones are cancelled.
+        $this->notifications?->rescheduleRemindersForBooking($bookingId);
+
         $row = $this->fetchBooking($bookingId);
         $tableRow = $this->fetchTable((int) ($row['table_id'] ?? 0));
 
@@ -1129,6 +1148,11 @@ final class BookingService
         }
 
         $this->invalidateQuietly($restaurantId, $date);
+
+        // REQ-1.4: a cancelled booking must not receive its reminders.
+        if ($cancelled) {
+            $this->notifications?->cancelPendingReminders($bookingId);
+        }
 
         $row = $this->fetchBooking($bookingId);
         $tableRow = $this->fetchTable((int) ($row['table_id'] ?? 0));

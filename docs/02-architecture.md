@@ -286,3 +286,32 @@ released slot) and queues a `notification_log` row for W8.
 **HTTP** — `POST /api/v1/bookings/{reference}/change`, `POST …/cancel`, `POST …/manage-token`,
 `GET …/manage?token=…` (returns the booking plus `manage.can_change` / `manage.can_cancel`).
 Booking payloads now include `manage_token` and `manage_url`.
+
+## 11. REQ-1.4 — notifications (W8, implemented)
+
+```php
+// src/NotificationService.php
+public function scheduleRemindersForBooking(int $bookingId): int;   // 24 h + 2 h rows
+public function rescheduleRemindersForBooking(int $bookingId): int; // change: cancel old, queue new
+public function cancelPendingReminders(int $bookingId): int;        // cancel: drop queued reminders
+public function dispatch(int $limit = 50): array;                   // ['sent','failed','retried','cancelled','due']
+public function render(array $booking, array $restaurant, array $table, string $template): array;
+```
+
+**Queue** — `notification_log` is the outbox: `status` ∈ `QUEUED | SENT | FAILED | CANCELLED`,
+`scheduled_at` is the next attempt, `attempts` and `last_error` support triage. `BookingService::create()`
+still writes the confirmation row inside the booking transaction; `NotificationService` adds the two
+reminders after it (a reminder whose moment has already passed is skipped, e.g. a same-evening booking).
+
+**Templates** — `booking_confirmation`, `booking_reminder_24h`, `booking_reminder_2h`,
+`booking_changed`, `booking_cancelled`. Each carries reference, date, time window, party size and table;
+everything except the cancellation notice also carries the signed manage link from REQ-1.3.
+
+**Delivery** — a `Mailer` port. Production binds an SMTP adapter; the repository ships `FileMailer`
+(`storage/mail.log`) so the pipeline is runnable without credentials. Failures are retried after
+**1 / 5 / 15 minutes** and become `FAILED` after the fourth attempt; each attempt is isolated so one bad
+row never blocks the batch.
+
+**Triggers** — `bin/notify.php` (cron: `* * * * * cd /srv/dinereserve && php bin/notify.php --limit=200`),
+`POST /api/v1/notifications/dispatch` and `GET /api/v1/notifications/due`. `BookingService::setNotifications()`
+keeps the queue in sync when a booking is created, changed or cancelled.
