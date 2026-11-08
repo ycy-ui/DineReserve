@@ -114,6 +114,8 @@ CREATE TABLE IF NOT EXISTS waitlist_entries (
     guest_contact     VARCHAR(254) NOT NULL,
     status            VARCHAR(16) NOT NULL DEFAULT 'WAITING',
     offer_expires_at  DATETIME NULL,
+    offer_table_id    INT NULL,
+    offer_time        VARCHAR(5) NULL,
     created_at        DATETIME NOT NULL,
     KEY idx_waitlist_queue (restaurant_id, entry_date, status, created_at),
     CONSTRAINT fk_waitlist_restaurant FOREIGN KEY (restaurant_id) REFERENCES restaurants(id),

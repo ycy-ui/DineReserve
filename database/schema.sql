@@ -104,8 +104,10 @@ CREATE TABLE waitlist_entries (
     party_size     INTEGER NOT NULL,
     guest_name     TEXT    NOT NULL,
     guest_contact  TEXT    NOT NULL,
-    status         TEXT    NOT NULL DEFAULT 'WAITING', -- WAITING | OFFERED | SEATED | EXPIRED | PASSED_OVER
-    offer_expires_at TEXT,
+    status         TEXT    NOT NULL DEFAULT 'WAITING', -- WAITING | OFFERED | CONVERTED | DECLINED | EXPIRED | PASSED_OVER
+    offer_expires_at TEXT,                            -- 5-minute offer deadline (REQ-1.5)
+    offer_table_id INTEGER,                           -- table held for the offer
+    offer_time     TEXT,                              -- HH:MM of the held slot
     created_at     TEXT    NOT NULL
 );
 

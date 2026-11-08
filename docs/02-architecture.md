@@ -315,3 +315,33 @@ row never blocks the batch.
 **Triggers** — `bin/notify.php` (cron: `* * * * * cd /srv/dinereserve && php bin/notify.php --limit=200`),
 `POST /api/v1/notifications/dispatch` and `GET /api/v1/notifications/due`. `BookingService::setNotifications()`
 keeps the queue in sync when a booking is created, changed or cancelled.
+
+## 12. REQ-1.5 — waitlist and 5-minute offers (W9, implemented)
+
+```php
+// src/WaitlistService.php
+public function join(array $input): array;                           // ['entry','position','created']
+public function position(int $entryId): int;                          // 1 = next in line
+public function offerNextForReleasedSlot(int $restaurantId, string $date, string $time, int $tableId): ?array;
+public function accept(int $entryId, array $input): array;            // ['entry','booking']
+public function decline(int $entryId, array $input): array;           // ['entry','offered']
+public function expireOffers(): array;                                // ['expired','offered']
+```
+
+**Queue** — `waitlist_entries` is per restaurant and per day, `created_at, id` gives the strict arrival
+order required by the URS. `position()` counts only `WAITING` rows, so an offered diner no longer holds a
+place in the queue.
+
+**Offer lifecycle** — `WAITING → OFFERED → CONVERTED | DECLINED | EXPIRED`. When a booking is cancelled,
+`BookingService::cancel()` hands the freed slot to `offerNextForReleasedSlot()`: the first waiter whose
+party fits the table and whose service period matches gets `offer_expires_at = now + 5 min`,
+`offer_table_id` / `offer_time`, an e-mail notice through the W8 `Mailer` port, and an `audit_log` row.
+
+**Conversion** — `accept()` first claims the offer with a conditional `UPDATE … WHERE status='OFFERED'`
+(so two taps cannot create two bookings), then calls `BookingService::create()` with `channel = waitlist`;
+the normal slot rules are re-checked, so a table taken meanwhile yields `TABLE_TAKEN` and the offer is
+handed back. `decline()` and `expireOffers()` (cron: `bin/waitlist.php --expire`) pass the slot to the next
+waiter when the table is still free.
+
+**Schema** — `waitlist_entries` gained `offer_table_id` and `offer_time`; bookings gained the `channel`
+field (`online | phone | walk_in | waitlist`), which the reporting in W11 will use.

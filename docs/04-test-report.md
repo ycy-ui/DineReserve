@@ -24,7 +24,7 @@ concurrency test synchronises two forked processes on a barrier file.
 
 ```bash
 composer install
-vendor/bin/phpunit --do-not-cache-result                      # all 105 tests
+vendor/bin/phpunit --do-not-cache-result                      # all 123 tests
 vendor/bin/phpunit --filter Availability                      # REQ-1.1 rules
 vendor/bin/phpunit --filter Booking                           # REQ-1.2 rules
 vendor/bin/phpunit tests/BookingConcurrencyTest.php           # fork-based concurrency
@@ -44,7 +44,8 @@ The same suite runs on every push and pull request in `.github/workflows/ci.yml`
 | `tests/BookingConcurrencyTest.php` | 2 | 18 | 0.23 s | **REQ-1.2** race conditions, real processes |
 | `tests/BookingChangeTest.php` | 25 | 111 | 1.10 s | **REQ-1.3** change / cancel, signed link, audit |
 | `tests/NotificationServiceTest.php` | 16 | 77 | 0.71 s | **REQ-1.4** confirmation, reminders, retries |
-| **Total** | **105** | **844** | **4.77 s** | |
+| `tests/WaitlistServiceTest.php` | 18 | 58 | 0.80 s | **REQ-1.5** queue, 5-minute offers, conversion |
+| **Total** | **123** | **902** | **5.57 s** | |
 
 Status: **all green**, no warnings, notices or deprecations (`failOnWarning`/`failOnNotice` enabled in
 `phpunit.xml`), so a silent PHP 8.2/8.3 deprecation cannot slip into CI.
@@ -132,11 +133,25 @@ connection and asserts the table/date holds exactly one booking and that `bookin
 | Templates carry the reference, the details and the manage link | `testConfirmationRenderCarriesReferenceAndManageLink`, `testReminderRenderUsesTheRightWording` |
 | Batch processing respects the limit and reports due rows | `testDispatchRespectsTheLimit`, `testDueListsOnlyNotificationsThatAreAlreadyDue`, `testReminderSchedulingIsIdempotent` |
 
+## 5d. REQ-1.5 — waitlist: rule → test
+
+| URS rule (REQ-1.5 §10) | Test(s) |
+|---|---|
+| Diners join a per-restaurant/per-day queue in strict arrival order | `testJoinCreatesAWaitingEntryWithAPosition`, `testQueuePositionsFollowArrivalOrder`, `testDuplicateJoinReturnsTheExistingEntry` |
+| Joining validates date, service period, party size and contact | `testJoinValidatesEveryField`, `testJoinRejectsAPastDate`, `testJoinRejectsATimeOutsideTheServicePeriods`, `testJoinRejectsAnUnrealisticPartySize` |
+| A cancelled booking releases its table to the first matching waiter | `testCancellingABookingOffersTheSlotToTheFirstWaiter`, `testTheWaiterWhoFitsTheReleasedTableGetsTheOffer` |
+| The offer holds the table for five minutes and is notified | `testTheOfferNoticeCarriesTheDeadlineAndAcceptLink`, `testCancellingABookingOffersTheSlotToTheFirstWaiter` |
+| Accepting converts the offer into a real booking | `testAcceptingAnOfferCreatesAWaitlistBooking` |
+| An expired offer is refused | `testAcceptingAfterTheFiveMinutesIsRejected`, `testExpiredOffersArePassedToTheNextWaiter` |
+| Declining passes the slot to the next waiter | `testDecliningPassesTheSlotToTheNextWaiter`, `testPositionCountsOnlyWaitingEntries` |
+| Identity and sequencing safeguards | `testAcceptingWithTheWrongEmailLooksLikeANotFoundEntry`, `testAcceptingWithoutAnOfferIsRejected`, `testAcceptingWhenTheTableWasTakenMeanwhileKeepsTheOffer` |
+
 ## 6. Not covered yet (honest list)
 
 | Item | Status | Planned |
 |---|---|---|
-| REQ-1.5 waitlist, REQ-1.6 floor plan, REQ-1.7 reporting, REQ-1.8 risk score, REQ-1.9 administration | not implemented | W9–W11 |
+| REQ-1.6 floor plan, REQ-1.7 reporting, REQ-1.8 risk score, REQ-1.9 administration | not implemented | W10–W11 |
+| Waitlist offers are delivered by e-mail only (no SMS/push yet) | e-mail via the W8 Mailer port | W12 (pilot) |
 | Real SMTP delivery | `FileMailer` writes to `storage/mail.log`; the production adapter is bound in the TastyIgniter build | W12 (pilot) |
 | Notifications for change/cancel are only queued in `notification_log` (template rows); delivery and reminder rescheduling arrive with REQ-1.4 | queued only | W8 |
 | **PERF-1.1 … PERF-1.8** response-time measurements | only the availability/booking path is unit-tested, no load test yet | W12 (k6, 95th percentile) |
@@ -151,7 +166,7 @@ connection and asserts the table/date holds exactly one booking and that `bookin
 
 `.github/workflows/ci.yml` runs three jobs for every push and pull request:
 
-1. **PHP 8.2 · PHPUnit · SQLite** — dependency install, `php -l` on every file, the 105 tests above, then
+1. **PHP 8.2 · PHPUnit · SQLite** — dependency install, `php -l` on every file, the 123 tests above, then
    an HTTP smoke test against the running API (`health` → `availability` → `POST booking` → read it back).
 2. **MySQL 8.0 · schema + seed** — the MySQL dialect DDL is applied and the seed is written through the
    same application code, asserting 60 tables and 3 service periods.

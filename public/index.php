@@ -18,6 +18,7 @@ use DineReserve\DomainException;
 use DineReserve\FileMailer;
 use DineReserve\NotificationService;
 use DineReserve\SystemClock;
+use DineReserve\WaitlistService;
 
 $root = dirname(__DIR__);
 
@@ -81,6 +82,14 @@ $notifications = new NotificationService(
     static fn (string $reference): string => $bookings->issueManageToken($reference)
 );
 $bookings->setNotifications($notifications);
+$waitlist = new WaitlistService(
+    $pdo,
+    $availability,
+    $clock,
+    new FileMailer((string) (getenv('MAIL_LOG_PATH') ?: $root . '/storage/mail.log')),
+    $bookings
+);
+$bookings->setWaitlist($waitlist);
 
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Headers: Content-Type');
@@ -205,6 +214,11 @@ try {
                     'POST /api/v1/bookings/{reference}/cancel',
                     'POST /api/v1/bookings/{reference}/manage-token',
                     'GET /api/v1/bookings/{reference}/manage?token=...',
+                    'POST /api/v1/waitlist',
+                    'GET /api/v1/waitlist/{id}',
+                    'POST /api/v1/waitlist/{id}/accept',
+                    'POST /api/v1/waitlist/{id}/decline',
+                    'POST /api/v1/waitlist/expire',
                     'POST /api/v1/notifications/dispatch',
                     'GET /api/v1/notifications/due',
                 ],
@@ -354,6 +368,27 @@ try {
                 'expires_at' => $claims['expires_at'],
             ];
             respond($payload);
+
+        case $path === '/api/v1/waitlist' && $method === 'POST':
+            $input = json_decode(file_get_contents('php://input') ?: '[]', true);
+            if (!is_array($input)) {
+                respondError(400, 'MALFORMED_JSON', 'The request body must be a JSON object.');
+            }
+            respond($waitlist->join($input), 201);
+
+        case $path === '/api/v1/waitlist/expire' && $method === 'POST':
+            respond(['summary' => $waitlist->expireOffers()]);
+
+        case preg_match('#^/api/v1/waitlist/(\d+)$#', $path, $matches) === 1 && $method === 'GET':
+            respond(['entry' => $waitlist->getEntry((int) $matches[1])]);
+
+        case preg_match('#^/api/v1/waitlist/(\d+)/accept$#', $path, $matches) === 1 && $method === 'POST':
+            $input = json_decode(file_get_contents('php://input') ?: '[]', true);
+            respond($waitlist->accept((int) $matches[1], is_array($input) ? $input : []));
+
+        case preg_match('#^/api/v1/waitlist/(\d+)/decline$#', $path, $matches) === 1 && $method === 'POST':
+            $input = json_decode(file_get_contents('php://input') ?: '[]', true);
+            respond($waitlist->decline((int) $matches[1], is_array($input) ? $input : []));
 
         case $path === '/api/v1/notifications/dispatch' && $method === 'POST':
             $input = json_decode(file_get_contents('php://input') ?: '[]', true);
