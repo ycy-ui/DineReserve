@@ -119,6 +119,47 @@ jobs:
             echo "notification smoke OK (" . $rows . " rows)" . PHP_EOL;
           '
 
+      - name: Smoke-test the waitlist flow
+        run: |
+          set -euo pipefail
+          if [ ! -f src/WaitlistService.php ]; then
+            echo "Waitlist not implemented yet (arrives in W9) - smoke test skipped."
+            exit 0
+          fi
+          php bin/seed.php database/waitlist-smoke.sqlite
+          php -r '
+            require "bootstrap/autoload.php";
+            $pdo = \DineReserve\Database::sqlite("database/waitlist-smoke.sqlite");
+            $clock = new \DineReserve\SystemClock("Asia/Macau");
+            $availability = new \DineReserve\AvailabilityService($pdo, $clock);
+            $bookings = new \DineReserve\BookingService($pdo, $availability, $clock);
+            $waitlist = new \DineReserve\WaitlistService(
+                $pdo, $availability, $clock, new \DineReserve\FileMailer("storage/mail.log"), $bookings
+            );
+            $bookings->setWaitlist($waitlist);
+            $date = (new DateTimeImmutable("+7 days", new DateTimeZone("Asia/Macau")))->format("Y-m-d");
+            $entry = $waitlist->join([
+                "restaurant_id" => 1, "date" => $date, "time" => "19:00", "party_size" => 4,
+                "name" => "CI Wait", "email" => "wait@example.com",
+            ]);
+            $booking = $bookings->create([
+                "restaurant_id" => 1, "table_id" => 3, "date" => $date, "time" => "19:00",
+                "party_size" => 4, "name" => "CI Guest", "email" => "guest@example.com",
+            ]);
+            $bookings->cancel(["reference" => $booking["booking"]["reference"], "email" => "guest@example.com"]);
+            $offered = $waitlist->getEntry((int) $entry["entry"]["id"]);
+            if ($offered["status"] !== "OFFERED") {
+                fwrite(STDERR, "expected OFFERED, got " . $offered["status"] . PHP_EOL);
+                exit(1);
+            }
+            $accepted = $waitlist->accept((int) $entry["entry"]["id"], ["email" => "wait@example.com"]);
+            if (($accepted["booking"]["channel"] ?? "") !== "waitlist") {
+                fwrite(STDERR, "expected the waitlist channel" . PHP_EOL);
+                exit(1);
+            }
+            echo "waitlist smoke OK (" . $accepted["booking"]["reference"] . ")" . PHP_EOL;
+          '
+
   mysql:
     name: MySQL 8.0 · schema + seed
     runs-on: ubuntu-latest

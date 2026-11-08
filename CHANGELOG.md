@@ -4,6 +4,25 @@ All notable changes to DineReserve are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 weeks refer to the 14-week plan in [`docs/02-architecture.md`](docs/02-architecture.md) and the Task 1 proposal.
 
+## [0.4.0] - 2026-11-08 — Week 9: waitlist and 5-minute offers (REQ-1.5)
+
+### Added (W9 · REQ-1.5)
+- `WaitlistService`: join a per-restaurant/per-day queue with strict arrival order and party-size matching,
+  and expose the queue position.
+- Automatic release: when a confirmed booking is cancelled, `BookingService::cancel()` offers the freed
+  table to the first waiter whose party fits — the offer holds the table for **five minutes**.
+- Accepting converts the offer into a real booking (`channel = waitlist`) through the normal booking rules,
+  so availability is re-checked and the reference/cut-off/e-mails still apply.
+- Declining or letting the offer expire passes the slot to the next waiter; `bin/waitlist.php --expire`
+  (cron) performs the sweep, and `POST /api/v1/waitlist/expire` exposes it over HTTP.
+- Offer notices go out through the W8 `Mailer` port with the deadline and the accept URL;
+  every transition appends an `audit_log` row.
+- Added `offer_table_id` / `offer_time` to `waitlist_entries` (both dialects) and a `channel` field to
+  booking creation (`online | phone | walk_in | waitlist`).
+- HTTP API: `POST /api/v1/waitlist`, `GET /api/v1/waitlist/{id}`, `POST …/accept`, `POST …/decline`,
+  `POST /api/v1/waitlist/expire`.
+- 18 new tests (123 total / 902 assertions).
+
 ## [0.3.0] - 2026-11-06 — Week 8: notifications (REQ-1.4)
 
 ### Added (W8 · REQ-1.4)
@@ -107,6 +126,7 @@ weeks refer to the 14-week plan in [`docs/02-architecture.md`](docs/02-architect
 - Change/cancel (REQ-1.3), waitlist (REQ-1.5), floor plan (REQ-1.6), reporting (REQ-1.7),
   risk scoring (REQ-1.8) and administration (REQ-1.9) remain planned for W7–W11.
 
+[0.4.0]: https://github.com/ycy-ui/DineReserve/releases/tag/v0.4.0
 [0.3.0]: https://github.com/ycy-ui/DineReserve/releases/tag/v0.3.0
 [0.2.0]: https://github.com/ycy-ui/DineReserve/releases/tag/v0.2.0
 [0.1.1]: https://github.com/ycy-ui/DineReserve/releases/tag/v0.1.1

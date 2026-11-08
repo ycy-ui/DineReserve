@@ -2,7 +2,7 @@
   "project": "DineReserve",
   "group": 6,
   "source": "https://github.com/ycy-ui/DineReserve",
-  "updated_at": "2026-11-06",
+  "updated_at": "2026-11-08",
   "note": "Source of truth for the Feishu Bitable sync. W1-W6 were produced in one iteration on 2026-11-02; no dates are backdated (see docs/07-delivery-log.md).",
   "rows": [
     {
@@ -131,14 +131,14 @@
       "task": "候补队列 + 5 分钟自动报价 + 释放桌台",
       "requirement": "REQ-1.5",
       "owner": "王恩泽",
-      "status": "未开始",
+      "status": "已完成",
       "planned_start": "2026-11-17",
       "planned_end": "2026-11-23",
-      "actual_done": null,
-      "progress": 0,
-      "artifact": "待建：WaitlistService",
-      "link": "Issue #9",
-      "note": ""
+      "actual_done": "2026-11-08",
+      "progress": 1,
+      "artifact": "src/WaitlistService.php、bin/waitlist.php、tests/WaitlistServiceTest.php、public/index.php、database/schema*.sql",
+      "link": "PR #28",
+      "note": "18 tests；FIFO 候补 + 5 分钟报价 + 转订位"
     },
     {
       "week": "W10",

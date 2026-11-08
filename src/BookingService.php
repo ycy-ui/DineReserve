@@ -68,6 +68,12 @@ final class BookingService
         $this->availability = $availability ?? new AvailabilityService($pdo, $this->clock);
     }
 
+    /** Bind the REQ-1.5 waitlist pipeline (optional; tests may omit it). */
+    public function setWaitlist(WaitlistService $waitlist): void
+    {
+        $this->waitlist = $waitlist;
+    }
+
     /** Bind the REQ-1.4 notification pipeline (optional; tests may omit it). */
     public function setNotifications(NotificationService $notifications): void
     {
@@ -238,6 +244,11 @@ final class BookingService
             }
         }
 
+        $channel = isset($input['channel']) ? strtolower(trim((string) $input['channel'])) : 'online';
+        if (!in_array($channel, self::CHANNELS, true)) {
+            $errors['channel'] = 'Unknown booking channel.';
+        }
+
         $idempotencyToken = null;
         if (($input['idempotency_token'] ?? null) !== null) {
             if (!is_string($input['idempotency_token'])) {
@@ -285,6 +296,7 @@ final class BookingService
             'mobile' => $mobile,
             'special_requests' => $specialRequests,
             'idempotency_token' => $idempotencyToken,
+            'channel' => $channel,
         ];
     }
 
@@ -409,7 +421,7 @@ final class BookingService
             'guest_email' => $data['email'],
             'guest_mobile' => $data['mobile'],
             'special_requests' => $data['special_requests'],
-            'channel' => 'online',
+            'channel' => $data['channel'] ?? 'online',
             'cutoff_at' => $this->storageDateTime($cutoffAt),
             'created_at' => $this->storageDateTime($nowIso),
         ];
@@ -457,7 +469,7 @@ final class BookingService
                     $data['email'],
                     $data['mobile'],
                     $data['special_requests'],
-                    'online',
+                    $data['channel'] ?? 'online',
                     $this->storageDateTime($cutoffAt),
                     $data['idempotency_token'],
                     null,
@@ -890,11 +902,17 @@ final class BookingService
     /** Development fallback so the demo/tests work without configuration. */
     private const MANAGE_SECRET_FALLBACK = 'dinereserve-development-manage-secret';
 
+    public const CHANNELS = ['online', 'phone', 'walk_in', 'waitlist'];
+
     /**
      * Optional notification pipeline (REQ-1.4). When bound, creating, changing
      * and cancelling a booking also keeps the reminder queue in sync.
      */
     private ?NotificationService $notifications = null;
+
+    /** Optional waitlist pipeline (REQ-1.5): a cancelled slot is offered to the
+     *  first matching waiter for five minutes. */
+    private ?WaitlistService $waitlist = null;
 
 
     /**
@@ -1152,6 +1170,20 @@ final class BookingService
         // REQ-1.4: a cancelled booking must not receive its reminders.
         if ($cancelled) {
             $this->notifications?->cancelPendingReminders($bookingId);
+        }
+
+        // REQ-1.5: the freed slot is offered to the first matching waiter.
+        if ($cancelled && $this->waitlist !== null) {
+            try {
+                $this->waitlist->offerNextForReleasedSlot(
+                    $restaurantId,
+                    (string) $booking['booking_date'],
+                    (string) $booking['start_time'],
+                    (int) $booking['table_id']
+                );
+            } catch (Throwable) {
+                // A waitlist hiccup must never undo a committed cancellation.
+            }
         }
 
         $row = $this->fetchBooking($bookingId);
