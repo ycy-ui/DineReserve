@@ -32,7 +32,7 @@ CREATE TABLE tables (
     area          TEXT    NOT NULL DEFAULT 'main',
     pos_x         INTEGER NOT NULL DEFAULT 0,
     pos_y         INTEGER NOT NULL DEFAULT 0,
-    status        TEXT    NOT NULL DEFAULT 'FREE',     -- FREE | BLOCKED | MAINTENANCE
+    status        TEXT    NOT NULL DEFAULT 'FREE',     -- FREE | OCCUPIED | CLEANING | BLOCKED | MAINTENANCE (REQ-1.6)
     UNIQUE (restaurant_id, code)
 );
 

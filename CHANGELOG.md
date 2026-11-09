@@ -4,6 +4,23 @@ All notable changes to DineReserve are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 weeks refer to the 14-week plan in [`docs/02-architecture.md`](docs/02-architecture.md) and the Task 1 proposal.
 
+## [0.5.0] - 2026-11-09 — Week 10: floor plan and table statuses (REQ-1.6)
+
+### Added (W10 · REQ-1.6)
+- `FloorPlanService`: a live floor-plan snapshot (tables, areas, positions, current and upcoming bookings)
+  with `poll_after_seconds = 5` for the host screen.
+- Check-in: `CONFIRMED → SEATED` and the table becomes `OCCUPIED` (duplicate/cancelled check-ins rejected).
+- Walk-in: a booking is created with `channel = walk_in` and immediately seated.
+- No-show: `CONFIRMED → NO_SHOW`, the table goes to `CLEANING` and disappears from availability.
+- Release: `OCCUPIED|CLEANING → FREE` and a still-seated booking becomes `COMPLETED`; blocked/maintenance
+  tables refuse release.
+- Every transition appends a `booking_events` row (`seated`, `no_show`, `released`) and an `audit_log` row,
+  and invalidates the availability cache for that date.
+- Table statuses documented as `FREE | OCCUPIED | CLEANING | BLOCKED | MAINTENANCE`; availability still
+  only offers `FREE` tables.
+- HTTP API: `GET /api/v1/floorplan`, `POST …/seat`, `POST …/walk-in`, `POST …/no-show`, `POST …/release`.
+- 17 new tests (140 total / 1002 assertions).
+
 ## [0.4.0] - 2026-11-08 — Week 9: waitlist and 5-minute offers (REQ-1.5)
 
 ### Added (W9 · REQ-1.5)
@@ -126,6 +143,7 @@ weeks refer to the 14-week plan in [`docs/02-architecture.md`](docs/02-architect
 - Change/cancel (REQ-1.3), waitlist (REQ-1.5), floor plan (REQ-1.6), reporting (REQ-1.7),
   risk scoring (REQ-1.8) and administration (REQ-1.9) remain planned for W7–W11.
 
+[0.5.0]: https://github.com/ycy-ui/DineReserve/releases/tag/v0.5.0
 [0.4.0]: https://github.com/ycy-ui/DineReserve/releases/tag/v0.4.0
 [0.3.0]: https://github.com/ycy-ui/DineReserve/releases/tag/v0.3.0
 [0.2.0]: https://github.com/ycy-ui/DineReserve/releases/tag/v0.2.0

@@ -160,6 +160,44 @@ jobs:
             echo "waitlist smoke OK (" . $accepted["booking"]["reference"] . ")" . PHP_EOL;
           '
 
+      - name: Smoke-test the floor-plan flow
+        run: |
+          set -euo pipefail
+          if [ ! -f src/FloorPlanService.php ]; then
+            echo "Floor plan not implemented yet (arrives in W10) - smoke test skipped."
+            exit 0
+          fi
+          php bin/seed.php database/floorplan-smoke.sqlite
+          php -r '
+            require "bootstrap/autoload.php";
+            $pdo = \DineReserve\Database::sqlite("database/floorplan-smoke.sqlite");
+            $clock = new \DineReserve\SystemClock("Asia/Macau");
+            $availability = new \DineReserve\AvailabilityService($pdo, $clock);
+            $bookings = new \DineReserve\BookingService($pdo, $availability, $clock);
+            $floorplan = new \DineReserve\FloorPlanService($pdo, $availability, $clock, $bookings);
+            $date = (new DateTimeImmutable("+7 days", new DateTimeZone("Asia/Macau")))->format("Y-m-d");
+            $snapshot = $floorplan->snapshot(1, $date);
+            if ($snapshot["poll_after_seconds"] !== 5 || count($snapshot["tables"]) !== 60) {
+                fwrite(STDERR, "unexpected floor-plan snapshot" . PHP_EOL);
+                exit(1);
+            }
+            $booking = $bookings->create([
+                "restaurant_id" => 1, "table_id" => 3, "date" => $date, "time" => "19:00",
+                "party_size" => 4, "name" => "CI Floor", "email" => "floor@example.com",
+            ]);
+            $seated = $floorplan->seat($booking["booking"]["reference"]);
+            if ($seated["booking"]["status"] !== "SEATED" || $seated["table"]["status"] !== "OCCUPIED") {
+                fwrite(STDERR, "check-in failed" . PHP_EOL);
+                exit(1);
+            }
+            $released = $floorplan->release(3, $date);
+            if ($released["table"]["status"] !== "FREE" || ($released["completed_booking"]["status"] ?? "") !== "COMPLETED") {
+                fwrite(STDERR, "release failed" . PHP_EOL);
+                exit(1);
+            }
+            echo "floor-plan smoke OK" . PHP_EOL;
+          '
+
   mysql:
     name: MySQL 8.0 · schema + seed
     runs-on: ubuntu-latest

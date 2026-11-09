@@ -24,7 +24,7 @@ concurrency test synchronises two forked processes on a barrier file.
 
 ```bash
 composer install
-vendor/bin/phpunit --do-not-cache-result                      # all 123 tests
+vendor/bin/phpunit --do-not-cache-result                      # all 140 tests
 vendor/bin/phpunit --filter Availability                      # REQ-1.1 rules
 vendor/bin/phpunit --filter Booking                           # REQ-1.2 rules
 vendor/bin/phpunit tests/BookingConcurrencyTest.php           # fork-based concurrency
@@ -45,7 +45,8 @@ The same suite runs on every push and pull request in `.github/workflows/ci.yml`
 | `tests/BookingChangeTest.php` | 25 | 111 | 1.10 s | **REQ-1.3** change / cancel, signed link, audit |
 | `tests/NotificationServiceTest.php` | 16 | 77 | 0.71 s | **REQ-1.4** confirmation, reminders, retries |
 | `tests/WaitlistServiceTest.php` | 18 | 58 | 0.80 s | **REQ-1.5** queue, 5-minute offers, conversion |
-| **Total** | **123** | **902** | **5.57 s** | |
+| `tests/FloorPlanServiceTest.php` | 17 | 100 | 0.75 s | **REQ-1.6** floor plan, seat/walk-in/no-show/release |
+| **Total** | **140** | **1002** | **6.35 s** | |
 
 Status: **all green**, no warnings, notices or deprecations (`failOnWarning`/`failOnNotice` enabled in
 `phpunit.xml`), so a silent PHP 8.2/8.3 deprecation cannot slip into CI.
@@ -146,11 +147,24 @@ connection and asserts the table/date holds exactly one booking and that `bookin
 | Declining passes the slot to the next waiter | `testDecliningPassesTheSlotToTheNextWaiter`, `testPositionCountsOnlyWaitingEntries` |
 | Identity and sequencing safeguards | `testAcceptingWithTheWrongEmailLooksLikeANotFoundEntry`, `testAcceptingWithoutAnOfferIsRejected`, `testAcceptingWhenTheTableWasTakenMeanwhileKeepsTheOffer` |
 
+## 5e. REQ-1.6 — floor plan: rule → test
+
+| URS rule (REQ-1.6 §11) | Test(s) |
+|---|---|
+| A host screen can read the live floor plan (tables, bookings, 5 s refresh) | `testSnapshotListsTablesAndMarksTheCurrentBooking`, `testSnapshotShowsTheUpcomingBookingBeforeTheSlot`, `testSnapshotValidatesTheRestaurant` |
+| Check-in moves the booking to SEATED and the table to OCCUPIED | `testSeatMovesTheBookingToSeatedAndOccupiesTheTable`, `testSeatingTheSameBookingTwiceIsRejected`, `testSeatingACancelledBookingIsRejected`, `testSeatingAnUnknownReferenceIsNotFound` |
+| Walk-ins are seated immediately (channel `walk_in`) | `testWalkInCreatesASeatedWalkInBooking`, `testWalkInValidatesItsInput`, `testWalkInRejectsAPartyTooBigForTheTable` |
+| No-shows release the booking and send the table to cleaning | `testNoShowMarksTheBookingAndSendsTheTableToCleaning`, `testNoShowRejectsASeatedBooking` |
+| Release frees the table and completes the seated booking | `testReleaseFreesTheTableAndCompletesTheSeatedBooking`, `testReleasingABlockedTableIsRejected` |
+| Table statuses drive availability | `testOccupiedTableIsNotOfferedByAvailability`, `testCleaningTableBecomesBookableAgainAfterRelease` |
+| Every transition is audited | `testEveryTransitionIsAudited` |
+
 ## 6. Not covered yet (honest list)
 
 | Item | Status | Planned |
 |---|---|---|
-| REQ-1.6 floor plan, REQ-1.7 reporting, REQ-1.8 risk score, REQ-1.9 administration | not implemented | W10–W11 |
+| REQ-1.7 reporting, REQ-1.8 risk score, REQ-1.9 administration | not implemented | W11 |
+| Floor-plan UI | the API + 5 s polling contract exist; the host screen ships with the TastyIgniter dashboard in W11 | W11 |
 | Waitlist offers are delivered by e-mail only (no SMS/push yet) | e-mail via the W8 Mailer port | W12 (pilot) |
 | Real SMTP delivery | `FileMailer` writes to `storage/mail.log`; the production adapter is bound in the TastyIgniter build | W12 (pilot) |
 | Notifications for change/cancel are only queued in `notification_log` (template rows); delivery and reminder rescheduling arrive with REQ-1.4 | queued only | W8 |
@@ -166,7 +180,7 @@ connection and asserts the table/date holds exactly one booking and that `bookin
 
 `.github/workflows/ci.yml` runs three jobs for every push and pull request:
 
-1. **PHP 8.2 · PHPUnit · SQLite** — dependency install, `php -l` on every file, the 123 tests above, then
+1. **PHP 8.2 · PHPUnit · SQLite** — dependency install, `php -l` on every file, the 140 tests above, then
    an HTTP smoke test against the running API (`health` → `availability` → `POST booking` → read it back).
 2. **MySQL 8.0 · schema + seed** — the MySQL dialect DDL is applied and the seed is written through the
    same application code, asserting 60 tables and 3 service periods.

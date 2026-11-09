@@ -16,6 +16,7 @@ use DineReserve\BookingService;
 use DineReserve\Database;
 use DineReserve\DomainException;
 use DineReserve\FileMailer;
+use DineReserve\FloorPlanService;
 use DineReserve\NotificationService;
 use DineReserve\SystemClock;
 use DineReserve\WaitlistService;
@@ -90,6 +91,7 @@ $waitlist = new WaitlistService(
     $bookings
 );
 $bookings->setWaitlist($waitlist);
+$floorplan = new FloorPlanService($pdo, $availability, $clock, $bookings);
 
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Headers: Content-Type');
@@ -214,6 +216,11 @@ try {
                     'POST /api/v1/bookings/{reference}/cancel',
                     'POST /api/v1/bookings/{reference}/manage-token',
                     'GET /api/v1/bookings/{reference}/manage?token=...',
+                    'GET /api/v1/floorplan',
+                    'POST /api/v1/floorplan/seat',
+                    'POST /api/v1/floorplan/walk-in',
+                    'POST /api/v1/floorplan/no-show',
+                    'POST /api/v1/floorplan/release',
                     'POST /api/v1/waitlist',
                     'GET /api/v1/waitlist/{id}',
                     'POST /api/v1/waitlist/{id}/accept',
@@ -368,6 +375,41 @@ try {
                 'expires_at' => $claims['expires_at'],
             ];
             respond($payload);
+
+        case $path === '/api/v1/floorplan' && $method === 'GET':
+            $restaurantId = (int) ($_GET['restaurant_id'] ?? 1);
+            $date = (string) ($_GET['date'] ?? (new DateTimeImmutable('now', new DateTimeZone('Asia/Macau')))->format('Y-m-d'));
+            $time = isset($_GET['time']) ? (string) $_GET['time'] : null;
+            respond($floorplan->snapshot($restaurantId ?: 1, $date, $time));
+
+        case $path === '/api/v1/floorplan/seat' && $method === 'POST':
+            $input = json_decode(file_get_contents('php://input') ?: '[]', true);
+            if (!is_array($input) || !is_string($input['reference'] ?? null)) {
+                respondError(400, 'MALFORMED_JSON', 'Send {"reference": "XXXXXXXX"}.');
+            }
+            respond($floorplan->seat((string) $input['reference']));
+
+        case $path === '/api/v1/floorplan/walk-in' && $method === 'POST':
+            $input = json_decode(file_get_contents('php://input') ?: '[]', true);
+            if (!is_array($input)) {
+                respondError(400, 'MALFORMED_JSON', 'The request body must be a JSON object.');
+            }
+            respond($floorplan->walkIn($input), 201);
+
+        case $path === '/api/v1/floorplan/no-show' && $method === 'POST':
+            $input = json_decode(file_get_contents('php://input') ?: '[]', true);
+            if (!is_array($input) || !is_string($input['reference'] ?? null)) {
+                respondError(400, 'MALFORMED_JSON', 'Send {"reference": "XXXXXXXX"}.');
+            }
+            respond($floorplan->noShow((string) $input['reference']));
+
+        case $path === '/api/v1/floorplan/release' && $method === 'POST':
+            $input = json_decode(file_get_contents('php://input') ?: '[]', true);
+            $tableId = is_array($input) ? (int) ($input['table_id'] ?? 0) : 0;
+            if ($tableId < 1) {
+                respondError(400, 'MALFORMED_JSON', 'Send {"table_id": 12}.');
+            }
+            respond($floorplan->release($tableId, isset($input['date']) ? (string) $input['date'] : null));
 
         case $path === '/api/v1/waitlist' && $method === 'POST':
             $input = json_decode(file_get_contents('php://input') ?: '[]', true);
