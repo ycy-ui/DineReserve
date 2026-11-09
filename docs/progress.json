@@ -2,7 +2,7 @@
   "project": "DineReserve",
   "group": 6,
   "source": "https://github.com/ycy-ui/DineReserve",
-  "updated_at": "2026-11-08",
+  "updated_at": "2026-11-09",
   "note": "Source of truth for the Feishu Bitable sync. W1-W6 were produced in one iteration on 2026-11-02; no dates are backdated (see docs/07-delivery-log.md).",
   "rows": [
     {
@@ -146,14 +146,14 @@
       "task": "平面图与桌台状态（签入/走客/no-show/释放）",
       "requirement": "REQ-1.6",
       "owner": "谢丰毅",
-      "status": "未开始",
+      "status": "已完成",
       "planned_start": "2026-11-24",
       "planned_end": "2026-11-30",
-      "actual_done": null,
-      "progress": 0,
-      "artifact": "待建：floorplan 扩展",
-      "link": "Issue #10",
-      "note": ""
+      "actual_done": "2026-11-09",
+      "progress": 1,
+      "artifact": "src/FloorPlanService.php、tests/FloorPlanServiceTest.php、public/index.php、database/schema*.sql",
+      "link": "PR #29",
+      "note": "17 tests；平面图 + 签到/walk-in/no-show/释放"
     },
     {
       "week": "W11",

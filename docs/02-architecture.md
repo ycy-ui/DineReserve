@@ -345,3 +345,27 @@ waiter when the table is still free.
 
 **Schema** — `waitlist_entries` gained `offer_table_id` and `offer_time`; bookings gained the `channel`
 field (`online | phone | walk_in | waitlist`), which the reporting in W11 will use.
+
+## 13. REQ-1.6 — floor plan and table statuses (W10, implemented)
+
+```php
+// src/FloorPlanService.php
+public function snapshot(int $restaurantId, string $date, ?string $time = null): array; // poll_after_seconds = 5
+public function seat(string $reference): array;      // CONFIRMED → SEATED, table → OCCUPIED
+public function walkIn(array $input): array;         // channel = walk_in, immediately SEATED
+public function noShow(string $reference): array;    // CONFIRMED → NO_SHOW, table → CLEANING
+public function release(int $tableId, ?string $date = null): array; // OCCUPIED|CLEANING → FREE, SEATED → COMPLETED
+```
+
+**Table statuses** — `FREE | OCCUPIED | CLEANING | BLOCKED | MAINTENANCE`. `AvailabilityService` only ever
+offers `FREE` tables, so an occupied or dirty table disappears from search the moment the transition commits
+(the floor-plan service invalidates the availability cache for the affected date).
+
+**Snapshot** — every table with area/position, its status, the booking occupying the current time (if any)
+and the next confirmed booking of the day; `generated_at` + `poll_after_seconds = 5` let a host screen poll
+cheaply.
+
+**Transitions** — each one is a small transaction that updates `tables.status`, `bookings.status`, appends a
+`booking_events` row (`seated` / `no_show` / `released`, actor `host`) and an `audit_log` row. Illegal moves are
+refused: seating twice → `ALREADY_SEATED`, seating a cancelled booking → `BOOKING_NOT_SEATABLE`, no-show of a
+seated guest → `BOOKING_NOT_NO_SHOW`, releasing a blocked table → `TABLE_NOT_RELEASABLE`.

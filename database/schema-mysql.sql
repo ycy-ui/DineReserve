@@ -33,7 +33,7 @@ CREATE TABLE IF NOT EXISTS tables (
     area          VARCHAR(32) NOT NULL DEFAULT 'main',
     pos_x         SMALLINT NOT NULL DEFAULT 0,
     pos_y         SMALLINT NOT NULL DEFAULT 0,
-    status        VARCHAR(16) NOT NULL DEFAULT 'FREE',
+    status        VARCHAR(16) NOT NULL DEFAULT 'FREE', -- FREE | OCCUPIED | CLEANING | BLOCKED | MAINTENANCE
     UNIQUE KEY uq_table_code (restaurant_id, code),
     CONSTRAINT fk_table_restaurant FOREIGN KEY (restaurant_id) REFERENCES restaurants(id),
     CONSTRAINT chk_table_seats CHECK (seats >= 1)
