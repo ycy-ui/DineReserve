@@ -208,7 +208,8 @@ final class BookingConcurrencyTest extends TestCase
 
         try {
             $pdo = Database::sqlite($databaseFile);
-            $service = new BookingService($pdo, new AvailabilityService($pdo), new FrozenClock('2026-11-02 10:00:00'));
+            $clock = new FrozenClock('2026-11-02 10:00:00');
+            $service = new BookingService($pdo, new AvailabilityService($pdo, $clock), $clock);
             $service->create($input);
 
             return self::EXIT_SUCCESS;

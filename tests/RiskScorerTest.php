@@ -69,9 +69,9 @@ final class RiskScorerTest extends TestCase
 
     public function testShortLeadTimeRaisesTheScore(): void
     {
-        // Both dates are Tuesdays, so only the lead time differs.
+        // Same weekday class (Monday/Tuesday), only the lead time differs.
         $far = $this->scorer->score($this->context(['date' => '2026-11-24']));
-        $tomorrow = $this->scorer->score($this->context(['date' => '2026-11-03']));
+        $tomorrow = $this->scorer->score($this->context(['date' => '2026-11-02']));
 
         self::assertGreaterThan($far['score'], $tomorrow['score']);
         self::assertContains('short_lead', $this->reasonCodes($tomorrow));
