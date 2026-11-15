@@ -89,12 +89,13 @@ The diner demo is plain HTML/JS — just open `demo.html` in a browser, no serve
 | W8 | **REQ-1.4** confirmation, 24 h / 2 h reminders, 1/5/15 min retries, `notification_log` pipeline | `src/NotificationService.php`, `bin/notify.php` | ✅ |
 | W9 | **REQ-1.5** waitlist: strict arrival order, party-size match, 5-minute offers, conversion to a booking | `src/WaitlistService.php`, `bin/waitlist.php` | ✅ |
 | W10 | **REQ-1.6** floor plan and table statuses: check-in, walk-in, no-show, release, 5 s polling | `src/FloorPlanService.php` | ✅ |
+| W11 | **REQ-1.7 + 1.8** occupancy / utilisation / no-show / channel reports with CSV-XLSX-PDF export, explainable no-show risk score | `src/ReportService.php`, `src/RiskScorer.php`, `bin/report.php` | ✅ |
 
-Weeks 11–14 are planned: reporting (REQ-1.7), risk scoring (REQ-1.8), administration (REQ-1.9),
-then the non-functional test pass, the pilot service and delivery. See `CHANGELOG.md` and
+Weeks 12–14 are planned: administration (REQ-1.9), the non-functional test pass, the pilot service
+and delivery. See `CHANGELOG.md` and
 `docs/05-traceability.md`.
 
-> **Delivery note:** the W1–W10 deliverables above were produced in **one iteration on 2026-11-02**, not
+> **Delivery note:** the W1–W11 deliverables above were produced in **one iteration on 2026-11-02**, not
 > week by week; every commit carries that real date. [`docs/07-delivery-log.md`](docs/07-delivery-log.md)
 > states this plainly and maps each planned week to the artefact that satisfies it.
 
@@ -122,6 +123,9 @@ then the non-functional test pass, the pilot service and delivery. See `CHANGELO
 | POST | `/api/v1/floorplan/walk-in` | seat a walk-in guest | REQ-1.6 |
 | POST | `/api/v1/floorplan/no-show` | mark a no-show (table goes to CLEANING) | REQ-1.6 |
 | POST | `/api/v1/floorplan/release` | free a table and complete the seated booking | REQ-1.6 |
+| GET | `/api/v1/reports/occupancy` | daily occupancy, utilisation, no-show and channel report | REQ-1.7 |
+| GET | `/api/v1/reports/risk` | no-show risk distribution and flagged bookings | REQ-1.8 |
+| POST | `/api/v1/reports/export` | download the report as CSV, XLSX or PDF | REQ-1.7 |
 | GET | `/api/v1/notifications/due` | list the notifications that are due now | REQ-1.4 |
 
 Full request/response examples and the error-code table: [`docs/03-api.md`](docs/03-api.md).

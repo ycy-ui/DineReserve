@@ -82,7 +82,8 @@ CREATE TABLE IF NOT EXISTS bookings (
     channel           VARCHAR(16) NOT NULL DEFAULT 'online',
     cutoff_at         DATETIME NOT NULL,
     idempotency_token VARCHAR(64) NULL UNIQUE,
-    risk_score        TINYINT UNSIGNED NULL,
+    risk_score        TINYINT UNSIGNED NULL,          -- 0..100 no-show risk (REQ-1.8)
+    risk_rule_version VARCHAR(8) NOT NULL DEFAULT 'risk-v1',
     created_at        DATETIME NOT NULL,
     updated_at        DATETIME NOT NULL,
     KEY idx_bookings_table_date (table_id, booking_date),

@@ -198,6 +198,26 @@ jobs:
             echo "floor-plan smoke OK" . PHP_EOL;
           '
 
+      - name: Smoke-test the reporting pipeline
+        run: |
+          set -euo pipefail
+          if [ ! -f src/ReportService.php ]; then
+            echo "Reporting not implemented yet (arrives in W11) - smoke test skipped."
+            exit 0
+          fi
+          php bin/seed.php database/report-smoke.sqlite
+          FROM=$(date -d '-7 days' +%F)
+          TO=$(date -d '+7 days' +%F)
+          php bin/report.php --db=database/report-smoke.sqlite --from="$FROM" --to="$TO" | head -5
+          php bin/report.php --db=database/report-smoke.sqlite --from="$FROM" --to="$TO" --format=csv --out=storage/report-smoke.csv
+          test -s storage/report-smoke.csv
+          php bin/report.php --db=database/report-smoke.sqlite --from="$FROM" --to="$TO" --format=xlsx --out=storage/report-smoke.xlsx
+          head -c 4 storage/report-smoke.xlsx | grep -q "PK" || { echo "xlsx is not a zip archive"; exit 1; }
+          php bin/report.php --db=database/report-smoke.sqlite --from="$FROM" --to="$TO" --format=pdf --out=storage/report-smoke.pdf
+          head -c 4 storage/report-smoke.pdf | grep -q "%PDF" || { echo "pdf signature missing"; exit 1; }
+          php bin/report.php --db=database/report-smoke.sqlite --rescore --from="$FROM" --to="$TO"
+          echo "reporting smoke OK"
+
   mysql:
     name: MySQL 8.0 · schema + seed
     runs-on: ubuntu-latest

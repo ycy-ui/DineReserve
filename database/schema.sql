@@ -76,7 +76,8 @@ CREATE TABLE bookings (
     channel            TEXT    NOT NULL DEFAULT 'online', -- online | phone | walk_in | waitlist
     cutoff_at          TEXT    NOT NULL,               -- ISO 8601 with the restaurant tz offset
     idempotency_token  TEXT    UNIQUE,
-    risk_score         INTEGER,                        -- 0..100, REQ-1.8 (W11)
+    risk_score         INTEGER,                        -- 0..100 no-show risk, REQ-1.8
+    risk_rule_version  TEXT    NOT NULL DEFAULT 'risk-v1', -- version of the scoring rules
     created_at         TEXT    NOT NULL,
     updated_at         TEXT    NOT NULL
 );

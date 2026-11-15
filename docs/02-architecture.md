@@ -369,3 +369,33 @@ cheaply.
 `booking_events` row (`seated` / `no_show` / `released`, actor `host`) and an `audit_log` row. Illegal moves are
 refused: seating twice → `ALREADY_SEATED`, seating a cancelled booking → `BOOKING_NOT_SEATABLE`, no-show of a
 seated guest → `BOOKING_NOT_NO_SHOW`, releasing a blocked table → `TABLE_NOT_RELEASABLE`.
+
+## 14. REQ-1.7 / REQ-1.8 — reporting and no-show risk (W11, implemented)
+
+```php
+// src/ReportService.php
+public function occupancy(int $restaurantId, string $from, string $to): array; // days + totals
+public function risk(int $restaurantId, string $from, string $to): array;      // distribution + flagged
+
+// src/RiskScorer.php
+public function score(array $context, ?int $ignoreBookingId = null): array;    // score, band, reasons, rule_version
+public function applyToBooking(int $bookingId): array;                         // persist + audit
+public function rescoreRange(string $from, string $to, ?int $restaurantId = null): int;
+```
+
+**Occupancy** — capacity per day is `bookable seats × sittings`, where a sitting is what a service period can
+fit given the dining time plus the 15-minute turnover buffer. Covers count `CONFIRMED | SEATED | COMPLETED`
+bookings; cancellations and no-shows are reported separately so utilisation never flatters the floor. The
+no-show rate uses booked-minus-cancelled as its denominator.
+
+**Risk score** — additive and explainable: baseline 10 points, then lead time (<24 h +15, <72 h +10, <7 d +5),
+weekday (Fri/Sat +10, Sun +5), late sitting (≥20:00 +5), party size (≥8 +12, ≥6 +8), channel (online +5,
+phone −5, walk-in −10, waitlist −5), guest history (each past no-show +15, max 30; a clean regular −5) and a
+special request (−3). The score is clamped to 0–100; `HIGH` starts at 70. `risk-v1` is stored next to every
+score so an old score can still be explained after the rules change, and each scoring run appends an
+`audit_log` row.
+
+**Exports** — `ReportExporter` writes CSV, XLSX (a minimal OOXML workbook inside an uncompressed ZIP) and PDF
+(a small PDF 1.4 text document with Helvetica) with no runtime package, matching the engine's
+"no Composer at runtime" constraint. `bin/report.php` prints a text table or writes a file; the API serves the
+same report as a download.

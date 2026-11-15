@@ -68,6 +68,12 @@ final class BookingService
         $this->availability = $availability ?? new AvailabilityService($pdo, $this->clock);
     }
 
+    /** Bind the REQ-1.8 risk scorer (optional; tests may omit it). */
+    public function setRiskScorer(RiskScorer $riskScorer): void
+    {
+        $this->riskScorer = $riskScorer;
+    }
+
     /** Bind the REQ-1.5 waitlist pipeline (optional; tests may omit it). */
     public function setWaitlist(WaitlistService $waitlist): void
     {
@@ -140,6 +146,13 @@ final class BookingService
             $this->availability->invalidate($data['restaurant_id'], $data['date']);
         } catch (Throwable) {
             // A stale availability cache must never undo a confirmed booking.
+        }
+
+        // REQ-1.8: score the new booking and keep the rule version on the row.
+        try {
+            $this->riskScorer?->applyToBooking((int) $booking['id']);
+        } catch (Throwable) {
+            // A scoring failure must never undo a confirmed booking.
         }
 
         // REQ-1.4: queue the 24 h / 2 h reminders next to the confirmation row.
@@ -913,6 +926,9 @@ final class BookingService
     /** Optional waitlist pipeline (REQ-1.5): a cancelled slot is offered to the
      *  first matching waiter for five minutes. */
     private ?WaitlistService $waitlist = null;
+
+    /** Optional risk scorer (REQ-1.8): every new booking is scored on creation. */
+    private ?RiskScorer $riskScorer = null;
 
 
     /**
