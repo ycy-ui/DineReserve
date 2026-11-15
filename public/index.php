@@ -18,6 +18,9 @@ use DineReserve\DomainException;
 use DineReserve\FileMailer;
 use DineReserve\FloorPlanService;
 use DineReserve\NotificationService;
+use DineReserve\ReportExporter;
+use DineReserve\ReportService;
+use DineReserve\RiskScorer;
 use DineReserve\SystemClock;
 use DineReserve\WaitlistService;
 
@@ -91,6 +94,9 @@ $waitlist = new WaitlistService(
     $bookings
 );
 $bookings->setWaitlist($waitlist);
+$riskScorer = new RiskScorer($pdo, $clock);
+$bookings->setRiskScorer($riskScorer);
+$reports = new ReportService($pdo, $clock);
 $floorplan = new FloorPlanService($pdo, $availability, $clock, $bookings);
 
 header('Access-Control-Allow-Origin: *');
@@ -216,6 +222,9 @@ try {
                     'POST /api/v1/bookings/{reference}/cancel',
                     'POST /api/v1/bookings/{reference}/manage-token',
                     'GET /api/v1/bookings/{reference}/manage?token=...',
+                    'GET /api/v1/reports/occupancy?restaurant_id=&from=&to=',
+                    'GET /api/v1/reports/risk?restaurant_id=&from=&to=',
+                    'POST /api/v1/reports/export',
                     'GET /api/v1/floorplan',
                     'POST /api/v1/floorplan/seat',
                     'POST /api/v1/floorplan/walk-in',
@@ -441,6 +450,44 @@ try {
             $limit = (int) ($_GET['limit'] ?? 50);
             $due = $notifications->due($limit > 0 ? $limit : 50);
             respond(['due' => count($due), 'notifications' => $due]);
+
+        case $path === '/api/v1/reports/occupancy' && $method === 'GET':
+            respond($reports->occupancy(
+                (int) ($_GET['restaurant_id'] ?? 1),
+                (string) ($_GET['from'] ?? ''),
+                (string) ($_GET['to'] ?? '')
+            ));
+
+        case $path === '/api/v1/reports/risk' && $method === 'GET':
+            respond($reports->risk(
+                (int) ($_GET['restaurant_id'] ?? 1),
+                (string) ($_GET['from'] ?? ''),
+                (string) ($_GET['to'] ?? '')
+            ));
+
+        case $path === '/api/v1/reports/export' && $method === 'POST':
+            $input = json_decode(file_get_contents('php://input') ?: '[]', true);
+            if (!is_array($input)) {
+                respondError(400, 'MALFORMED_JSON', 'The request body must be a JSON object.');
+            }
+            $format = strtolower((string) ($input['format'] ?? 'csv'));
+            $kind = (string) ($input['kind'] ?? 'occupancy');
+            $from = (string) ($input['from'] ?? '');
+            $to = (string) ($input['to'] ?? '');
+            $restaurantId = (int) ($input['restaurant_id'] ?? 1);
+            $report = $kind === 'risk' ? $reports->risk($restaurantId, $from, $to) : $reports->occupancy($restaurantId, $from, $to);
+            $path = sys_get_temp_dir() . '/dinereserve-report-' . bin2hex(random_bytes(6)) . '.' . $format;
+            (new ReportExporter())->export($report, $format, $path);
+            $mime = match ($format) {
+                'xlsx' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                'pdf' => 'application/pdf',
+                default => 'text/csv',
+            };
+            header('Content-Type: ' . $mime);
+            header('Content-Disposition: attachment; filename="dinereserve-' . $kind . '-' . $from . '-to-' . $to . '.' . $format . '"');
+            readfile($path);
+            @unlink($path);
+            exit;
 
         default:
             throw new DomainException('ROUTE_NOT_FOUND', sprintf('No route for %s %s.', $method, $path), [], 404);

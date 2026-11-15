@@ -4,6 +4,24 @@ All notable changes to DineReserve are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 weeks refer to the 14-week plan in [`docs/02-architecture.md`](docs/02-architecture.md) and the Task 1 proposal.
 
+## [0.6.0] - 2026-11-15 — Week 11: reporting and no-show risk (REQ-1.7, REQ-1.8)
+
+### Added (W11 · REQ-1.7 / REQ-1.8)
+- `ReportService`: daily occupancy and utilisation (capacity = bookable seats × sittings the service periods
+  allow), covers, no-show rate, channel mix (online / phone / walk-in / waitlist) and range totals, all derived
+  from the booking rows and events.
+- `ReportExporter`: CSV, XLSX and PDF exports written without any runtime package — a minimal OOXML workbook
+  (uncompressed ZIP) and a small PDF 1.4 text document, so the deliverable stays dependency-free like the rest
+  of the engine.
+- `RiskScorer`: an explainable, additive 0–100 no-show score (lead time, weekday, late sitting, party size,
+  channel, guest no-show history, special requests), bands HIGH ≥ 70 / MEDIUM ≥ 40, and the rule version
+  `risk-v1` stored on every scored booking (`bookings.risk_rule_version`).
+- Every new booking is scored by `BookingService::setRiskScorer()`; `bin/report.php --rescore` re-scores a
+  range after a rule change, and each score is audited.
+- HTTP API: `GET /api/v1/reports/occupancy`, `GET /api/v1/reports/risk`, `POST /api/v1/reports/export`.
+- CLI: `bin/report.php` (text table, `--format=xlsx|pdf|csv`, `--out`, `--rescore`).
+- 26 new tests (166 total); CI gains a reporting smoke step.
+
 ## [0.5.0] - 2026-11-09 — Week 10: floor plan and table statuses (REQ-1.6)
 
 ### Added (W10 · REQ-1.6)
@@ -143,6 +161,7 @@ weeks refer to the 14-week plan in [`docs/02-architecture.md`](docs/02-architect
 - Change/cancel (REQ-1.3), waitlist (REQ-1.5), floor plan (REQ-1.6), reporting (REQ-1.7),
   risk scoring (REQ-1.8) and administration (REQ-1.9) remain planned for W7–W11.
 
+[0.6.0]: https://github.com/ycy-ui/DineReserve/releases/tag/v0.6.0
 [0.5.0]: https://github.com/ycy-ui/DineReserve/releases/tag/v0.5.0
 [0.4.0]: https://github.com/ycy-ui/DineReserve/releases/tag/v0.4.0
 [0.3.0]: https://github.com/ycy-ui/DineReserve/releases/tag/v0.3.0

@@ -17,7 +17,7 @@ final class BookingServiceTest extends TestCase
 {
     private function service(): BookingService
     {
-        return new BookingService($this->pdo, new AvailabilityService($this->pdo), $this->clock);
+        return new BookingService($this->pdo, new AvailabilityService($this->pdo, $this->clock), $this->clock);
     }
 
     /**

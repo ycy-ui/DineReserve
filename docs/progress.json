@@ -2,7 +2,7 @@
   "project": "DineReserve",
   "group": 6,
   "source": "https://github.com/ycy-ui/DineReserve",
-  "updated_at": "2026-11-09",
+  "updated_at": "2026-11-15",
   "note": "Source of truth for the Feishu Bitable sync. W1-W6 were produced in one iteration on 2026-11-02; no dates are backdated (see docs/07-delivery-log.md).",
   "rows": [
     {
@@ -161,14 +161,14 @@
       "task": "占用报表 + PDF/Excel 导出 + no-show 风险分",
       "requirement": "REQ-1.7、REQ-1.8",
       "owner": "王恩泽",
-      "status": "未开始",
+      "status": "已完成",
       "planned_start": "2026-12-01",
       "planned_end": "2026-12-07",
-      "actual_done": null,
-      "progress": 0,
-      "artifact": "待建：ReportService、RiskScorer",
-      "link": "Issue #11",
-      "note": ""
+      "actual_done": "2026-11-15",
+      "progress": 1,
+      "artifact": "src/ReportService.php、src/RiskScorer.php、src/ReportExporter.php、bin/report.php、tests/ReportingTest.php、tests/RiskScorerTest.php",
+      "link": "PR #30",
+      "note": "26 tests；占用/翻台/爽约/渠道报表 + PDF/Excel 导出 + 可解释风险分"
     },
     {
       "week": "W12",

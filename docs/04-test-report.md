@@ -24,7 +24,7 @@ concurrency test synchronises two forked processes on a barrier file.
 
 ```bash
 composer install
-vendor/bin/phpunit --do-not-cache-result                      # all 140 tests
+vendor/bin/phpunit --do-not-cache-result                      # all 166 tests
 vendor/bin/phpunit --filter Availability                      # REQ-1.1 rules
 vendor/bin/phpunit --filter Booking                           # REQ-1.2 rules
 vendor/bin/phpunit tests/BookingConcurrencyTest.php           # fork-based concurrency
@@ -46,7 +46,9 @@ The same suite runs on every push and pull request in `.github/workflows/ci.yml`
 | `tests/NotificationServiceTest.php` | 16 | 77 | 0.71 s | **REQ-1.4** confirmation, reminders, retries |
 | `tests/WaitlistServiceTest.php` | 18 | 58 | 0.80 s | **REQ-1.5** queue, 5-minute offers, conversion |
 | `tests/FloorPlanServiceTest.php` | 17 | 100 | 0.75 s | **REQ-1.6** floor plan, seat/walk-in/no-show/release |
-| **Total** | **140** | **1002** | **6.35 s** | |
+| `tests/ReportingTest.php` | 13 | 121 | 0.60 s | **REQ-1.7** occupancy, exports (CSV/XLSX/PDF) |
+| `tests/RiskScorerTest.php` | 13 | 55 | 0.55 s | **REQ-1.8** explainable no-show risk |
+| **Total** | **166** | **1178** | **7.60 s** | |
 
 Status: **all green**, no warnings, notices or deprecations (`failOnWarning`/`failOnNotice` enabled in
 `phpunit.xml`), so a silent PHP 8.2/8.3 deprecation cannot slip into CI.
@@ -159,12 +161,27 @@ connection and asserts the table/date holds exactly one booking and that `bookin
 | Table statuses drive availability | `testOccupiedTableIsNotOfferedByAvailability`, `testCleaningTableBecomesBookableAgainAfterRelease` |
 | Every transition is audited | `testEveryTransitionIsAudited` |
 
+## 5f. REQ-1.7 / REQ-1.8 — reporting and risk: rule → test
+
+| URS rule | Test(s) |
+|---|---|
+| Daily covers, capacity and utilisation are computed from the bookings | `testOccupancyCountsCoversAndCapacityPerDay`, `testTotalsAggregateTheWholeRange` |
+| Cancellations and no-shows are reported separately and never inflate covers | `testCancelledAndNoShowBookingsAreNotCountedAsCovers` |
+| The channel mix is reported per range | `testChannelMixIsReported` |
+| An empty range still returns the full day list with zero totals | `testEmptyRangeReturnsZeroTotals` |
+| Range guards: bad dates, reversed range, more than a quarter | `testRangeValidation` |
+| Reports export to CSV, XLSX and PDF | `testCsvExportContainsHeaderAndRows`, `testXlsxExportIsAZipWorkbook`, `testPdfExportStartsWithThePdfSignature`, `testRiskReportExportsAsXlsx`, `testUnsupportedFormatIsRejected` |
+| Risk distribution, average and rule version are reported | `testRiskReportSummarisesScores`, `testRiskReportFlagsHighRiskBookings` |
+| The score is explainable and rule-driven | `testScoresAStandardBookingWithAnExplainableBreakdown`, `testShortLeadTimeRaisesTheScore`, `testLargePartiesScoreHigher`, `testWeekendSittingsScoreHigherThanMidweek`, `testLateSittingsScoreHigher`, `testChannelChangesTheScore`, `testPastNoShowsRaiseTheScore`, `testSpecialRequestsLowerTheScore` |
+| The score is clamped to 0–100 and banded | `testScoreIsClampedAndBanded` |
+| The score and rule version are persisted and each scoring run is audited | `testApplyToBookingStoresTheScoreAndRuleVersion`, `testNewBookingsAreScoredOnCreation`, `testScoringAnUnknownBookingIsRejected`, `testRescoreRangeUpdatesEveryBooking` |
+
 ## 6. Not covered yet (honest list)
 
 | Item | Status | Planned |
 |---|---|---|
-| REQ-1.7 reporting, REQ-1.8 risk score, REQ-1.9 administration | not implemented | W11 |
-| Floor-plan UI | the API + 5 s polling contract exist; the host screen ships with the TastyIgniter dashboard in W11 | W11 |
+| REQ-1.9 administration | not implemented | W12 |
+| Reporting UI / risk dashboard | the APIs and exports exist; the manager screens ship with the TastyIgniter dashboard in W12 | W12 |
 | Waitlist offers are delivered by e-mail only (no SMS/push yet) | e-mail via the W8 Mailer port | W12 (pilot) |
 | Real SMTP delivery | `FileMailer` writes to `storage/mail.log`; the production adapter is bound in the TastyIgniter build | W12 (pilot) |
 | Notifications for change/cancel are only queued in `notification_log` (template rows); delivery and reminder rescheduling arrive with REQ-1.4 | queued only | W8 |
@@ -180,7 +197,7 @@ connection and asserts the table/date holds exactly one booking and that `bookin
 
 `.github/workflows/ci.yml` runs three jobs for every push and pull request:
 
-1. **PHP 8.2 · PHPUnit · SQLite** — dependency install, `php -l` on every file, the 140 tests above, then
+1. **PHP 8.2 · PHPUnit · SQLite** — dependency install, `php -l` on every file, the 166 tests above, then
    an HTTP smoke test against the running API (`health` → `availability` → `POST booking` → read it back).
 2. **MySQL 8.0 · schema + seed** — the MySQL dialect DDL is applied and the seed is written through the
    same application code, asserting 60 tables and 3 service periods.
