@@ -191,7 +191,7 @@ final class ReportingTest extends TestCase
         self::assertStringContainsString('2026-11-03', $content);
         self::assertStringContainsString('Utilisation %', $content);
         self::assertStringContainsString('TOTAL', $content);
-        unlink($path);
+        @unlink($path);
     }
 
     public function testXlsxExportIsAZipWorkbook(): void
@@ -206,7 +206,7 @@ final class ReportingTest extends TestCase
         self::assertStringContainsString('xl/worksheets/sheet1.xml', $content);
         self::assertStringContainsString('DineReserve', $content);
         self::assertStringContainsString('2026-11-03', $content);
-        unlink($path);
+        @unlink($path);
     }
 
     public function testPdfExportStartsWithThePdfSignature(): void
@@ -219,7 +219,7 @@ final class ReportingTest extends TestCase
         self::assertStringStartsWith('%PDF-1.4', $content);
         self::assertStringContainsString('DineReserve', $content);
         self::assertStringContainsString('%%EOF', $content);
-        unlink($path);
+        @unlink($path);
     }
 
     public function testRiskReportExportsAsXlsx(): void
@@ -231,7 +231,7 @@ final class ReportingTest extends TestCase
         $content = (string) file_get_contents($path);
         self::assertStringStartsWith("PK\x03\x04", $content);
         self::assertStringContainsString('no-show risk report', $content);
-        unlink($path);
+        @unlink($path);
     }
 
     public function testUnsupportedFormatIsRejected(): void
@@ -240,6 +240,6 @@ final class ReportingTest extends TestCase
         $path = tempnam(sys_get_temp_dir(), 'dr-bad-') . '.txt';
 
         $this->assertDomainCode('REPORT_FORMAT_UNSUPPORTED', fn () => $this->exporter->export($report, 'docx', $path));
-        unlink($path);
+        @unlink($path);
     }
 }
