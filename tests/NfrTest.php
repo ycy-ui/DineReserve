@@ -103,9 +103,16 @@ final class NfrTest extends TestCase
     public function testCapacityIsAtLeastTheSeatCount(): void
     {
         $report = $this->reports->occupancy($this->restaurantId, '2026-11-10', '2026-11-10');
-        $seats = (int) $this->pdo->query('SELECT SUM(seats) FROM tables WHERE restaurant_id = ' . $this->restaurantId)->fetchColumn();
+        $bookableSeats = (int) $this->pdo->query(
+            "SELECT SUM(seats) FROM tables WHERE restaurant_id = " . $this->restaurantId
+            . " AND status NOT IN ('BLOCKED', 'MAINTENANCE')"
+        )->fetchColumn();
 
-        self::assertSame($seats * 4, $report['capacity_per_day'], 'capacity = seats x sittings (4 for the demo periods)');
+        self::assertSame(
+            $bookableSeats * 4,
+            $report['capacity_per_day'],
+            'capacity = bookable seats x sittings (4 for the demo periods)'
+        );
     }
 
     public function testDemoSeedCoversSixtyTablesAndThreePeriods(): void

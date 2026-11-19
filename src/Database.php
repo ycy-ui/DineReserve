@@ -215,13 +215,21 @@ final class Database
             'INSERT INTO users (restaurant_id, name, email, password_hash, is_active, created_at)
              VALUES (?, ?, ?, ?, 1, ?)'
         );
+        $roleIds = [];
+        foreach ($pdo->query('SELECT id, code FROM roles')->fetchAll(PDO::FETCH_ASSOC) as $roleRow) {
+            $roleIds[(string) $roleRow['code']] = (int) $roleRow['id'];
+        }
+        $assignRole = $pdo->prepare('INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)');
         $hash = password_hash('DemoPass123!', PASSWORD_DEFAULT);
         foreach ([
-            ['Demo Manager', 'manager@dinereserve.local'],
-            ['Demo Host', 'host@dinereserve.local'],
-            ['Demo Admin', 'admin@dinereserve.local'],
-        ] as [$name, $email]) {
+            ['Demo Manager', 'manager@dinereserve.local', 'manager'],
+            ['Demo Host', 'host@dinereserve.local', 'host'],
+            ['Demo Admin', 'admin@dinereserve.local', 'administrator'],
+        ] as [$name, $email, $roleCode]) {
             $insertUser->execute([$restaurantId, $name, $email, $hash, $storedNow]);
+            if (isset($roleIds[$roleCode])) {
+                $assignRole->execute([(int) $pdo->lastInsertId(), $roleIds[$roleCode]]);
+            }
         }
 
         return [

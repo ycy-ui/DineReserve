@@ -92,10 +92,11 @@ final class AdminServiceTest extends TestCase
         }
         self::assertNotNull($exception);
         self::assertSame('VALIDATION_ERROR', $exception->errorCode());
-        self::assertArrayHasKey('name', $exception->details());
-        self::assertArrayHasKey('email', $exception->details());
-        self::assertArrayHasKey('password', $exception->details());
-        self::assertArrayHasKey('role', $exception->details());
+        $errors = $exception->details()['errors'];
+        self::assertArrayHasKey('name', $errors);
+        self::assertArrayHasKey('email', $errors);
+        self::assertArrayHasKey('password', $errors);
+        self::assertArrayHasKey('role', $errors);
         self::assertSame(0, (int) $this->pdo->query('SELECT COUNT(*) FROM users WHERE email = "nope"')->fetchColumn());
     }
 
