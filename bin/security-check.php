@@ -172,7 +172,9 @@ check('invalid booking input returns every field error in one response', functio
         'email' => 'not-an-email',
     ]));
 
-    return $result['status'] === 422 && count($result['details']) >= 5;
+    $errors = is_array($result['details']['errors'] ?? null) ? $result['details']['errors'] : [];
+
+    return $result['status'] === 422 && count($errors) >= 5;
 });
 
 // 10. Audit trail is written for authentication events
