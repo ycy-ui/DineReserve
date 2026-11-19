@@ -65,6 +65,16 @@ CREATE TABLE IF NOT EXISTS user_roles (
     CONSTRAINT fk_ur_role FOREIGN KEY (role_id) REFERENCES roles(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- REQ-1.9 policy settings: per-restaurant values the manager can change at runtime.
+CREATE TABLE IF NOT EXISTS settings (
+    restaurant_id  INT  NOT NULL,
+    `key`          VARCHAR(64) NOT NULL,
+    value          VARCHAR(255) NOT NULL,
+    updated_at     DATETIME NOT NULL,
+    PRIMARY KEY (restaurant_id, `key`),
+    CONSTRAINT fk_settings_restaurant FOREIGN KEY (restaurant_id) REFERENCES restaurants(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS bookings (
     id                INT AUTO_INCREMENT PRIMARY KEY,
     reference         CHAR(8) NOT NULL UNIQUE,

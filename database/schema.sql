@@ -59,6 +59,15 @@ CREATE TABLE user_roles (
     PRIMARY KEY (user_id, role_id)
 );
 
+-- REQ-1.9 policy settings: per-redirector values the manager can change at runtime.
+CREATE TABLE settings (
+    restaurant_id  INTEGER NOT NULL REFERENCES restaurants(id),
+    key            TEXT    NOT NULL,
+    value          TEXT    NOT NULL,
+    updated_at     TEXT    NOT NULL,
+    PRIMARY KEY (restaurant_id, key)
+);
+
 CREATE TABLE bookings (
     id                 INTEGER PRIMARY KEY AUTOINCREMENT,
     reference          TEXT    NOT NULL UNIQUE,        -- 8 chars, unambiguous alphabet

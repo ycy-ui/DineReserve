@@ -218,6 +218,23 @@ jobs:
           php bin/report.php --db=database/report-smoke.sqlite --rescore --from="$FROM" --to="$TO"
           echo "reporting smoke OK"
 
+      - name: Smoke-test the admin console and NFR checks
+        run: |
+          set -euo pipefail
+          if [ ! -f src/AdminService.php ]; then
+            echo "Administration not implemented yet (arrives in W12) - smoke test skipped."
+            exit 0
+          fi
+          php bin/seed.php database/admin-smoke.sqlite
+          php bin/admin.php --db=database/admin-smoke.sqlite list
+          php bin/admin.php --db=database/admin-smoke.sqlite create \
+            --name="CI Host" --email=ci-host@example.com --password=Passw0rd! --role=host
+          php bin/admin.php --db=database/admin-smoke.sqlite set-role --id=4 --role=manager
+          php bin/admin.php --db=database/admin-smoke.sqlite settings
+          php bin/admin.php --db=database/admin-smoke.sqlite settings --set=cutoff_minutes=90
+          php bin/security-check.php
+          php bin/bench.php --iterations=30
+
   mysql:
     name: MySQL 8.0 · schema + seed
     runs-on: ubuntu-latest

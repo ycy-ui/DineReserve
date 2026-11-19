@@ -22,7 +22,7 @@ final class InfrastructureTest extends TestCase
 
         $expected = [
             'audit_log', 'booking_events', 'bookings', 'idempotency_keys', 'notification_log',
-            'restaurants', 'roles', 'service_periods', 'tables', 'user_roles', 'users', 'waitlist_entries',
+            'restaurants', 'roles', 'service_periods', 'settings', 'tables', 'user_roles', 'users', 'waitlist_entries',
         ];
 
         self::assertSame($expected, $tables);

@@ -90,12 +90,12 @@ The diner demo is plain HTML/JS — just open `demo.html` in a browser, no serve
 | W9 | **REQ-1.5** waitlist: strict arrival order, party-size match, 5-minute offers, conversion to a booking | `src/WaitlistService.php`, `bin/waitlist.php` | ✅ |
 | W10 | **REQ-1.6** floor plan and table statuses: check-in, walk-in, no-show, release, 5 s polling | `src/FloorPlanService.php` | ✅ |
 | W11 | **REQ-1.7 + 1.8** occupancy / utilisation / no-show / channel reports with CSV-XLSX-PDF export, explainable no-show risk score | `src/ReportService.php`, `src/RiskScorer.php`, `bin/report.php` | ✅ |
+| W12 | **REQ-1.9** users / roles / policy settings + the 27 non-functional requirements (latency budgets, security baseline, backup & restore, capacity) | `src/AdminService.php`, `bin/admin.php`, `bin/bench.php`, `bin/security-check.php`, `docs/08-nfr-validation.md` | ✅ |
 
-Weeks 12–14 are planned: administration (REQ-1.9), the non-functional test pass, the pilot service
-and delivery. See `CHANGELOG.md` and
+Weeks 13–14 are planned: the pilot service with a partner restaurant, code freeze and the v1.0 delivery. See `CHANGELOG.md` and
 `docs/05-traceability.md`.
 
-> **Delivery note:** the W1–W11 deliverables above were produced in **one iteration on 2026-11-02**, not
+> **Delivery note:** the W1–W12 deliverables above were produced in **one iteration on 2026-11-02**, not
 > week by week; every commit carries that real date. [`docs/07-delivery-log.md`](docs/07-delivery-log.md)
 > states this plainly and maps each planned week to the artefact that satisfies it.
 
@@ -126,6 +126,11 @@ and delivery. See `CHANGELOG.md` and
 | GET | `/api/v1/reports/occupancy` | daily occupancy, utilisation, no-show and channel report | REQ-1.7 |
 | GET | `/api/v1/reports/risk` | no-show risk distribution and flagged bookings | REQ-1.8 |
 | POST | `/api/v1/reports/export` | download the report as CSV, XLSX or PDF | REQ-1.7 |
+| GET | `/api/v1/admin/users` | list users with their roles (admin token) | REQ-1.9 |
+| POST | `/api/v1/admin/users` | create a user and assign a role | REQ-1.9 |
+| PATCH | `/api/v1/admin/users/{id}` | change a role or deactivate an account | REQ-1.9 |
+| POST | `/api/v1/admin/login` | verify credentials, return the user with roles | REQ-1.9 |
+| GET/PATCH | `/api/v1/admin/settings` | read or change the policy settings | REQ-1.9 |
 | GET | `/api/v1/notifications/due` | list the notifications that are due now | REQ-1.4 |
 
 Full request/response examples and the error-code table: [`docs/03-api.md`](docs/03-api.md).
