@@ -11,6 +11,7 @@ declare(strict_types=1);
  * MySQL 8.0 deployment of the TastyIgniter build through DB_DSN/DB_* env vars.
  */
 
+use DineReserve\AdminService;
 use DineReserve\AvailabilityService;
 use DineReserve\BookingService;
 use DineReserve\Database;
@@ -97,14 +98,16 @@ $bookings->setWaitlist($waitlist);
 $riskScorer = new RiskScorer($pdo, $clock);
 $bookings->setRiskScorer($riskScorer);
 $reports = new ReportService($pdo, $clock);
+$admin = new AdminService($pdo, $clock);
 $floorplan = new FloorPlanService($pdo, $availability, $clock, $bookings);
 
 header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Headers: Content-Type');
+header('Access-Control-Allow-Headers: Content-Type, X-Admin-Token, X-Actor-Role');
 header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
 header('Content-Type: application/json; charset=utf-8');
 
 $method = strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET'));
+$actorRole = strtolower(trim((string) ($_SERVER['HTTP_X_ACTOR_ROLE'] ?? ''))) ?: 'administrator';
 $path = parse_url((string) ($_SERVER['REQUEST_URI'] ?? '/'), PHP_URL_PATH) ?: '/';
 $path = rtrim($path, '/') ?: '/';
 
@@ -488,6 +491,61 @@ try {
             readfile($path);
             @unlink($path);
             exit;
+
+        // ---------------------------------------------------------- admin (REQ-1.9)
+        case $path === '/api/v1/admin/users' && $method === 'GET':
+            $admin->requireToken($_SERVER['HTTP_X_ADMIN_TOKEN'] ?? null);
+            $admin->requireCapability($actorRole, 'users.read');
+            respond(['users' => $admin->users()]);
+
+        case $path === '/api/v1/admin/users' && $method === 'POST':
+            $admin->requireToken($_SERVER['HTTP_X_ADMIN_TOKEN'] ?? null);
+            $admin->requireCapability($actorRole, 'users.write');
+            $input = json_decode(file_get_contents('php://input') ?: '[]', true);
+            if (!is_array($input)) {
+                respondError(400, 'MALFORMED_JSON', 'The request body must be a JSON object.');
+            }
+            respond($admin->createUser($input), 201);
+
+        case preg_match('#^/api/v1/admin/users/(\d+)$#', $path, $matches) === 1 && in_array($method, ['PATCH', 'POST'], true):
+            $admin->requireToken($_SERVER['HTTP_X_ADMIN_TOKEN'] ?? null);
+            $admin->requireCapability($actorRole, 'users.write');
+            $input = json_decode(file_get_contents('php://input') ?: '[]', true);
+            if (!is_array($input)) {
+                respondError(400, 'MALFORMED_JSON', 'The request body must be a JSON object.');
+            }
+            $userId = (int) $matches[1];
+            $user = $admin->findUser($userId);
+            if (isset($input['role'])) {
+                $user = $admin->setRole($userId, (string) $input['role']);
+            }
+            if (isset($input['is_active'])) {
+                $user = $admin->setActive($userId, (bool) $input['is_active']);
+            }
+            respond(['user' => $user]);
+
+        case $path === '/api/v1/admin/login' && $method === 'POST':
+            $input = json_decode(file_get_contents('php://input') ?: '[]', true);
+            if (!is_array($input)) {
+                respondError(400, 'MALFORMED_JSON', 'The request body must be a JSON object.');
+            }
+            respond(['user' => $admin->authenticate((string) ($input['email'] ?? ''), (string) ($input['password'] ?? ''))]);
+
+        case $path === '/api/v1/admin/settings' && $method === 'GET':
+            $admin->requireToken($_SERVER['HTTP_X_ADMIN_TOKEN'] ?? null);
+            $admin->requireCapability($actorRole, 'settings.read');
+            respond(['settings' => $admin->settings((int) ($_GET['restaurant_id'] ?? 1))]);
+
+        case $path === '/api/v1/admin/settings' && in_array($method, ['PATCH', 'POST'], true):
+            $admin->requireToken($_SERVER['HTTP_X_ADMIN_TOKEN'] ?? null);
+            $admin->requireCapability($actorRole, 'settings.write');
+            $input = json_decode(file_get_contents('php://input') ?: '[]', true);
+            if (!is_array($input)) {
+                respondError(400, 'MALFORMED_JSON', 'The request body must be a JSON object.');
+            }
+            $restaurantId = (int) ($input['restaurant_id'] ?? 1);
+            unset($input['restaurant_id']);
+            respond(['settings' => $admin->updateSettings($restaurantId, $input)]);
 
         default:
             throw new DomainException('ROUTE_NOT_FOUND', sprintf('No route for %s %s.', $method, $path), [], 404);
