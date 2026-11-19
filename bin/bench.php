@@ -34,7 +34,6 @@ $pdo = Database::sqlite(':memory:');
 Database::migrate($pdo);
 $seed = Database::seedDemo($pdo, 60);
 $restaurantId = $seed['restaurant_id'];
-$tableId = $seed['tables'][0];
 
 $availability = new AvailabilityService($pdo, $clock);
 $bookings = new BookingService($pdo, $availability, $clock);
@@ -68,7 +67,7 @@ $results['availability search'] = measure(
 $results['booking creation'] = measure(
     fn (int $i) => $bookings->create([
         'restaurant_id' => $restaurantId,
-        'table_id' => $tableId,
+        'table_id' => $seed['tables'][$i % count($seed['tables'])],
         'date' => '2026-11-' . str_pad((string) (10 + $i % 10), 2, '0', STR_PAD_LEFT),
         'time' => '19:00',
         'party_size' => 2,
