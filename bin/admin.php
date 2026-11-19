@@ -19,16 +19,18 @@ use DineReserve\Database;
 use DineReserve\SystemClock;
 
 $root = dirname(__DIR__);
-$command = $argv[1] ?? 'list';
+$command = 'list';
 $options = ['db' => null, 'restaurant' => 1, 'set' => []];
 
-foreach (array_slice($argv, 2) as $argument) {
+foreach (array_slice($argv, 1) as $argument) {
     if (preg_match('/^--(name|email|password|role|id|db|restaurant|set)=(.*)$/', $argument, $match) === 1) {
         if ($match[1] === 'set') {
             $options['set'][] = $match[2];
         } else {
             $options[$match[1]] = $match[2];
         }
+    } elseif ($argument !== '' && !str_starts_with($argument, '--')) {
+        $command = $argument;
     }
 }
 if ($options['db'] === null) {
