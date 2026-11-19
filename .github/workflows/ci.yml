@@ -43,13 +43,6 @@ jobs:
             fi
           done
 
-      - name: Per-suite counts (temporary)
-        run: |
-          for f in tests/*Test.php; do
-            echo "SUITE $f"
-            vendor/bin/phpunit --colors=never --do-not-cache-result "$f" 2>&1 | grep -E "^OK|Tests: " | tail -1
-          done
-
       - name: Run the test suite
         run: |
           set -euo pipefail

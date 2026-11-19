@@ -2,7 +2,7 @@
   "project": "DineReserve",
   "group": 6,
   "source": "https://github.com/ycy-ui/DineReserve",
-  "updated_at": "2026-11-15",
+  "updated_at": "2026-11-19",
   "note": "Source of truth for the Feishu Bitable sync. W1-W6 were produced in one iteration on 2026-11-02; no dates are backdated (see docs/07-delivery-log.md).",
   "rows": [
     {
@@ -176,14 +176,14 @@
       "task": "管理端配置 + NFR 验证（性能/安全/可用性/容量）",
       "requirement": "REQ-1.9、27 条 NFR",
       "owner": "杨澄翼",
-      "status": "未开始",
+      "status": "已完成",
       "planned_start": "2026-12-08",
       "planned_end": "2026-12-14",
-      "actual_done": null,
-      "progress": 0,
-      "artifact": "待建：admin + docs/04-test-report 全量版",
-      "link": "Issue #12、#13",
-      "note": ""
+      "actual_done": "2026-11-19",
+      "progress": 1,
+      "artifact": "src/AdminService.php、bin/admin.php、bin/bench.php、bin/security-check.php、tests/AdminServiceTest.php、tests/NfrTest.php、docs/08-nfr-validation.md",
+      "link": "PR #31",
+      "note": "25 tests；用户/角色/策略配置 + 27 条 NFR（延迟/安全/备份/容量）验证"
     },
     {
       "week": "W13",

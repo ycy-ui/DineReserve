@@ -4,6 +4,27 @@ All notable changes to DineReserve are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 weeks refer to the 14-week plan in [`docs/02-architecture.md`](docs/02-architecture.md) and the Task 1 proposal.
 
+## [0.7.0] - 2026-11-19 — Week 12: administration and NFR validation (REQ-1.9)
+
+### Added (W12 · REQ-1.9)
+- `AdminService`: user creation, role assignment, activation, bcrypt password hashing,
+  constant-time admin token, role → capability matrix (administrator / manager / host / viewer).
+- Per-restaurant policy settings in the new `settings` table — slot minutes, booking window,
+  cut-off, turnover buffer, waitlist offer TTL and maximum party size — with range validation
+  and an audit row per change.
+- HTTP API: `GET/POST /api/v1/admin/users`, `PATCH /api/v1/admin/users/{id}`,
+  `POST /api/v1/admin/login`, `GET/PATCH /api/v1/admin/settings` behind `X-Admin-Token`
+  and `X-Actor-Role`.
+- CLI: `bin/admin.php` (`list`, `create`, `set-role`, `settings`).
+
+### Added (W12 · non-functional validation)
+- `bin/bench.php`: p50/p95/mean/max latency for availability, booking, report and floor plan,
+  with budgets that fail the build on regression.
+- `bin/security-check.php`: 15 runtime checks — credential storage, authentication,
+  authorisation, validation, prepared statements and the audit trail.
+- `docs/08-nfr-validation.md`: the 27 NFRs with target, method and evidence.
+- 25 new tests (191 total); CI gains an admin/NFR smoke step.
+
 ## [0.6.0] - 2026-11-15 — Week 11: reporting and no-show risk (REQ-1.7, REQ-1.8)
 
 ### Added (W11 · REQ-1.7 / REQ-1.8)
@@ -161,6 +182,7 @@ weeks refer to the 14-week plan in [`docs/02-architecture.md`](docs/02-architect
 - Change/cancel (REQ-1.3), waitlist (REQ-1.5), floor plan (REQ-1.6), reporting (REQ-1.7),
   risk scoring (REQ-1.8) and administration (REQ-1.9) remain planned for W7–W11.
 
+[0.7.0]: https://github.com/ycy-ui/DineReserve/releases/tag/v0.7.0
 [0.6.0]: https://github.com/ycy-ui/DineReserve/releases/tag/v0.6.0
 [0.5.0]: https://github.com/ycy-ui/DineReserve/releases/tag/v0.5.0
 [0.4.0]: https://github.com/ycy-ui/DineReserve/releases/tag/v0.4.0

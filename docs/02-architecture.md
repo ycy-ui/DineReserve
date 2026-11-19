@@ -399,3 +399,33 @@ score so an old score can still be explained after the rules change, and each sc
 (a small PDF 1.4 text document with Helvetica) with no runtime package, matching the engine's
 "no Composer at runtime" constraint. `bin/report.php` prints a text table or writes a file; the API serves the
 same report as a download.
+
+## 15. REQ-1.9 — administration and policy settings (W12, implemented)
+
+```php
+// src/AdminService.php
+public function tokenIsValid(?string $token): bool;      // hash_equals with ADMIN_TOKEN
+public function can(string $role, string $capability): bool;
+public function requireCapability(string $role, string $capability): void;  // 403
+public function users(): array;
+public function createUser(array $input): array;
+public function setRole(int $userId, string $roleCode): array;
+public function setActive(int $userId, bool $active): array;
+public function authenticate(string $email, string $password): array;
+public function settings(int $restaurantId): array;       // defaults merged with overrides
+public function updateSettings(int $restaurantId, array $changes): array;
+```
+
+Administration is a thin layer over the same tables the booking engine uses. Users are
+authenticated with `password_hash()` / `password_verify()`; the deployment credential
+(`ADMIN_TOKEN`) is compared with `hash_equals()`. Every admin route requires both the token and a
+capability granted by the caller's role (`X-Actor-Role`, default `administrator`).
+
+Policy settings live in one `settings(restaurant_id, key, value, updated_at)` row set, with the
+accepted range for each key declared in `AdminService::SETTINGS_RULES`; unknown keys and
+out-of-range values are rejected with a single validation envelope, and every change writes an
+`audit_log` row. The engine reads these values in W13 (the demo keeps the compile-time defaults so
+the behaviour stays deterministic for the tests).
+
+The NFR validation is documented in `docs/08-nfr-validation.md`; `bin/bench.php` and
+`bin/security-check.php` are the executable parts of it and both run in CI.
