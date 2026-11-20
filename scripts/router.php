@@ -11,7 +11,24 @@ declare(strict_types=1);
  * served by the built-in server; every /api/* request goes to public/index.php.
  */
 
-$root = dirname(__DIR__);
+$candidates = array_filter([
+    getenv('APP_ROOT') ?: null,
+    dirname(__DIR__),          // repository layout: <root>/scripts/router.php
+    __DIR__ . '/app',          // macOS bundle layout: Contents/Resources/{router.php, app/}
+]);
+$root = null;
+foreach ($candidates as $candidate) {
+    if (is_file($candidate . '/public/index.php')) {
+        $root = $candidate;
+        break;
+    }
+}
+if ($root === null) {
+    http_response_code(500);
+    echo 'DineReserve application root not found.';
+    return true;
+}
+
 $path = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
 
 if (str_starts_with($path, '/api')) {
