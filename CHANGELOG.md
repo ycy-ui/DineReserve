@@ -4,6 +4,24 @@ All notable changes to DineReserve are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 weeks refer to the 14-week plan in [`docs/02-architecture.md`](docs/02-architecture.md) and the Task 1 proposal.
 
+## [1.0.0] - 2026-12-28 — v1.0 release
+
+### Added (W14)
+- `docs/11-release-notes-v1.0.md`: release notes, requirement coverage, installation and
+  upgrade notes, known limitations, pilot-findings triage and the post-1.0 roadmap.
+- `docs/12-user-guide.md`: the short manual for the host desk and the duty manager.
+- Code-freeze checklist completed and signed; the freeze exception log records the two
+  v1.0 items (benchmark table selection, release packaging).
+
+### Fixed
+- `bin/bench.php` now benchmarks only bookable tables; previously a 50-iteration run
+  could hit a BLOCKED/MAINTENANCE table and abort (found during the v1.0 verification).
+
+### Verification
+- 199 tests / 1,311 assertions green locally and in CI; pilot rehearsal 9/9 invariants;
+  security baseline 15/15; latency budgets met (p95: availability 0.02 ms, booking
+  0.06 ms, report 0.20 ms, floor plan 0.08 ms on the in-memory demo).
+
 ## [0.8.0] - 2026-11-20 — Week 13: pilot rehearsal and code freeze
 
 ### Added (W13)
@@ -198,6 +216,7 @@ weeks refer to the 14-week plan in [`docs/02-architecture.md`](docs/02-architect
 - Change/cancel (REQ-1.3), waitlist (REQ-1.5), floor plan (REQ-1.6), reporting (REQ-1.7),
   risk scoring (REQ-1.8) and administration (REQ-1.9) remain planned for W7–W11.
 
+[1.0.0]: https://github.com/ycy-ui/DineReserve/releases/tag/v1.0.0
 [0.8.0]: https://github.com/ycy-ui/DineReserve/releases/tag/v0.8.0
 [0.7.0]: https://github.com/ycy-ui/DineReserve/releases/tag/v0.7.0
 [0.6.0]: https://github.com/ycy-ui/DineReserve/releases/tag/v0.6.0

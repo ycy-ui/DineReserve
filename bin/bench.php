@@ -64,10 +64,18 @@ $results['availability search'] = measure(
     fn () => $availability->search($restaurantId, '2026-11-10', '19:00', 4),
     $iterations
 );
+$bookableTables = array_map(
+    static fn (array $row): int => (int) $row['id'],
+    $pdo->query("SELECT id FROM tables WHERE restaurant_id = {$restaurantId} AND status = 'FREE' ORDER BY id")->fetchAll(PDO::FETCH_ASSOC)
+);
+if ($bookableTables === []) {
+    $bookableTables = $seed['tables'];
+}
+
 $results['booking creation'] = measure(
     fn (int $i) => $bookings->create([
         'restaurant_id' => $restaurantId,
-        'table_id' => $seed['tables'][$i % count($seed['tables'])],
+        'table_id' => $bookableTables[$i % count($bookableTables)],
         'date' => '2026-11-' . str_pad((string) (10 + $i % 10), 2, '0', STR_PAD_LEFT),
         'time' => '19:00',
         'party_size' => 2,
