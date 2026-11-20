@@ -111,6 +111,20 @@ clock, so it is repeatable and runs in CI on every pull request.
 > service, while the daily capacity covers three service periods for 60 tables.
 > The point of the rehearsal is correctness, not a full house.
 
+## Findings and triage — W13 rehearsal (filled, 2026-11-20)
+
+The rehearsal is not the live service, but it already surfaced the items below; each
+was triaged before v1.0.0 (full table in `docs/11-release-notes-v1.0.md`).
+
+| Finding | Decision |
+|---|---|
+| Benchmark iterated over blocked/maintenance tables and failed on a 50-iteration run | Fixed for v1.0.0 (`bin/bench.php` now selects bookable tables only) |
+| Utilisation is low for a single dinner service (4.3 %) because capacity covers all three periods | Documented: the rehearsal targets correctness, not a full house |
+| Cancelled bookings cancel their queued reminders (12 in the rehearsal) | Expected — guests must not be reminded about a cancelled booking |
+| Offers expire after 5 minutes; a late guest must re-join | By design — a table must not be held indefinitely |
+| `settings` are stored and validated but the engine still uses constants | Deferred to 1.1 (needs a settings reader in the services) |
+| The live restaurant service has not been run yet | Next step after v1.0.0; runbook ready, findings become a 1.0.x patch |
+
 ## Post-pilot review (fill in after the real service)
 
 | Question | Answer | Action |

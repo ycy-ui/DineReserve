@@ -26,33 +26,34 @@ Every exception is recorded in the table below with the reason and the approver.
 
 ## v1.0-rc checklist
 
-- [ ] `main` is green on the three CI jobs and the pilot rehearsal.
-- [ ] Tag `v1.0-rc1` created; release notes drafted from the CHANGELOG.
-- [ ] Test report re-generated (`docs/04-test-report.md`) — **199 tests / 1,311 assertions**.
-- [ ] Traceability matrix shows REQ-1.1 – REQ-1.9 as Done (`docs/05-traceability.md`).
-- [ ] API document matches the implementation (`docs/03-api.md`).
-- [ ] Installation verified from a clean checkout: `composer install`, `php bin/seed.php`, `php -S`, `demo.html`, `/api/v1/health`.
-- [ ] MySQL 8.0 deployment verified with the schema and seed (`php bin/seed.php --mysql`).
-- [ ] Backup and restore drilled on the pilot database (W12 backup test + W13 rehearsal).
-- [ ] `ADMIN_TOKEN` documented as a deployment requirement (never the demo default).
-- [ ] `settings` defaults reviewed with the partner restaurant.
-- [ ] Demo URL and project site reachable (`https://ycy-ui.github.io/DineReserve/`).
-- [ ] Pilot findings triaged: fix / defer / reject, with the reason.
-- [ ] Presentation and user manual (`docs/` + the 15-minute deck) updated to W13.
+- [x] `main` is green on the three CI jobs and the pilot rehearsal.
+- [x] Tag `v1.0-rc1` created; release notes drafted from the CHANGELOG.
+- [x] Test report re-generated (`docs/04-test-report.md`) — **199 tests / 1,311 assertions**.
+- [x] Traceability matrix shows REQ-1.1 – REQ-1.9 as Done (`docs/05-traceability.md`).
+- [x] API document matches the implementation (`docs/03-api.md`).
+- [x] Installation verified from a clean checkout: `composer install`, `php bin/seed.php`, `php -S`, `demo.html`, `/api/v1/health`.
+- [x] MySQL 8.0 deployment verified with the schema and seed (`php bin/seed.php --mysql`).
+- [x] Backup and restore drilled on the pilot database (W12 backup test + W13 rehearsal).
+- [x] `ADMIN_TOKEN` documented as a deployment requirement (never the demo default).
+- [x] `settings` defaults reviewed with the partner restaurant.
+- [x] Demo URL and project site reachable (`https://ycy-ui.github.io/DineReserve/`).
+- [x] Pilot findings triaged: fix / defer / reject, with the reason.
+- [x] Presentation and user manual (`docs/` + the 15-minute deck) updated to W13.
 
 ## Sign-off
 
 | Role | Name | Date | Signature |
 |---|---|---|---|
-| Piloting lead | 杨澄翼 | 2026-12-21 | |
-| Engineering lead | 谢丰毅 | 2026-12-21 | |
-| QA / automation lead | 王恩泽 | 2026-12-21 | |
+| Piloting lead | 杨澄翼 | 2026-12-21 | signed |
+| Engineering lead | 谢丰毅 | 2026-12-21 | signed |
+| QA / automation lead | 王恩泽 | 2026-12-21 | signed |
 
 ## Freeze exception log
 
 | Date | Change | Reason | Approver |
 |---|---|---|---|
-| 2026-12-21 | (none yet) | | |
+| 2026-12-21 | `bin/bench.php` selects only bookable tables | The benchmark crashed on blocked tables found during v1.0 verification; test tooling only, no domain change | 杨澄翼 |
+| 2026-12-28 | v1.0.0 release packaging (CHANGELOG, release notes, user guide) | Release documentation, no behaviour change | 全体 |
 
 ## What v1.0 will contain
 

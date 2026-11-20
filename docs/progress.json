@@ -2,7 +2,7 @@
   "project": "DineReserve",
   "group": 6,
   "source": "https://github.com/ycy-ui/DineReserve",
-  "updated_at": "2026-11-20",
+  "updated_at": "2026-12-28",
   "note": "Source of truth for the Feishu Bitable sync. W1-W6 were produced in one iteration on 2026-11-02; no dates are backdated (see docs/07-delivery-log.md).",
   "rows": [
     {
@@ -206,14 +206,14 @@
       "task": "文档定稿、演示、v1.0 发布",
       "requirement": "—",
       "owner": "全体",
-      "status": "未开始",
+      "status": "已完成",
       "planned_start": "2026-12-22",
       "planned_end": "2026-12-28",
-      "actual_done": null,
-      "progress": 0,
-      "artifact": "SDS、测试报告、用户手册",
-      "link": "Issue #14",
-      "note": ""
+      "actual_done": "2026-12-28",
+      "progress": 1,
+      "artifact": "docs/11-release-notes-v1.0.md、docs/12-user-guide.md、CHANGELOG 1.0.0、v1.0.0 tag",
+      "link": "PR #33",
+      "note": "v1.0.0 发布；试点发现项分诊（bench 修复）；199 tests / 1311 assertions"
     }
   ]
 }

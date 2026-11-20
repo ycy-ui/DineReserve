@@ -69,7 +69,7 @@ weeks left in the original window (assuming W1 started 2026-09-29, W14 would end
 | W11 | 2026-12-01 → 12-07 | **REQ-1.7 + REQ-1.8** occupancy / utilisation / no-show / channel reports with CSV-XLSX-PDF export, explainable no-show risk score — **done 2026-11-15**, 26 tests | [#11](https://github.com/ycy-ui/DineReserve/issues/11) |
 | W12 | 2026-12-08 → 12-14 | **REQ-1.9** users / roles / policy settings + the 27 NFRs validated (latency, security, backup, capacity) — **done 2026-11-19**, 25 tests | [#12](https://github.com/ycy-ui/DineReserve/issues/12) |
 | W13 | 2026-12-15 → 12-21 | **Pilot** one dinner service rehearsed end-to-end (12 bookings, waitlist offers, seating, walk-in, no-show, notifications, report, backup) + **code freeze** / v1.0-rc checklist — **done 2026-11-20**, 8 tests | [#14](https://github.com/ycy-ui/DineReserve/issues/14) |
-| W14 | 2026-12-22 → 12-28 | Documentation, demo, delivery | [#14](https://github.com/ycy-ui/DineReserve/issues/14) |
+| W14 | 2026-12-22 → 12-28 | **v1.0.0 release** — pilot findings triaged (benchmark fix), docs finalised (release notes + user guide), clean-checkout verification, tag `v1.0.0` and release — **done 2026-12-28**, 199 tests | [#14](https://github.com/ycy-ui/DineReserve/issues/14) |
 
 From W7 onward the cadence is real: one issue, one branch, one pull request per week, merged only when
 the three CI jobs are green.

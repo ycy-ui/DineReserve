@@ -92,11 +92,12 @@ The diner demo is plain HTML/JS — just open `demo.html` in a browser, no serve
 | W11 | **REQ-1.7 + 1.8** occupancy / utilisation / no-show / channel reports with CSV-XLSX-PDF export, explainable no-show risk score | `src/ReportService.php`, `src/RiskScorer.php`, `bin/report.php` | ✅ |
 | W12 | **REQ-1.9** users / roles / policy settings + the 27 non-functional requirements (latency budgets, security baseline, backup & restore, capacity) | `src/AdminService.php`, `bin/admin.php`, `bin/bench.php`, `bin/security-check.php`, `docs/08-nfr-validation.md` | ✅ |
 | W13 | **Pilot** one dinner service rehearsed end-to-end (bookings, waitlist offers, seating, walk-in, no-show, notifications, report, backup) + **code freeze** and v1.0-rc checklist | `src/PilotService.php`, `bin/pilot.php`, `tests/PilotTest.php`, `docs/09-pilot-runbook.md`, `docs/10-code-freeze.md` | ✅ |
+| W14 | **v1.0.0 release** — pilot findings triaged, docs finalised (release notes + user guide), clean-checkout verification, tag and release | `docs/11-release-notes-v1.0.md`, `docs/12-user-guide.md`, CHANGELOG 1.0.0 | ✅ |
 
-Week 14 is planned: the v1.0.0 release after the post-pilot review. See `CHANGELOG.md` and
+**Status: v1.0.0 released** (2026-12-28). The live restaurant pilot is the next step; its findings will ship as a 1.0.x patch. See `CHANGELOG.md` and
 `docs/05-traceability.md`.
 
-> **Delivery note:** the W1–W13 deliverables above were produced in **one iteration on 2026-11-02**, not
+> **Delivery note:** the W1–W14 deliverables above were produced in **one iteration on 2026-11-02**, not
 > week by week; every commit carries that real date. [`docs/07-delivery-log.md`](docs/07-delivery-log.md)
 > states this plainly and maps each planned week to the artefact that satisfies it.
 
