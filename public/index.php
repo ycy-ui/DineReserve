@@ -102,7 +102,7 @@ $admin = new AdminService($pdo, $clock);
 $floorplan = new FloorPlanService($pdo, $availability, $clock, $bookings);
 
 header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Headers: Content-Type, X-Admin-Token, X-Actor-Role');
+header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Admin-Token, X-Actor-Role');
 header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
 header('Content-Type: application/json; charset=utf-8');
 
@@ -132,6 +132,26 @@ function respond($data, int $status = 200): void
 function respondError(int $status, string $code, string $message, array $details = []): void
 {
     respond(['error' => ['code' => $code, 'message' => $message, 'details' => $details]], $status);
+}
+
+/**
+ * Resolve the caller of an admin request: a merchant session token
+ * (`Authorization: Bearer …`) or the deployment credential (`X-Admin-Token`).
+ *
+ * @return array{role:string,user:array<string,mixed>|null,via:string}
+ */
+function resolveActor(AdminService $admin, string $fallbackRole): array
+{
+    $header = (string) ($_SERVER['HTTP_AUTHORIZATION'] ?? '');
+    if (preg_match('/^Bearer\s+(.+)$/i', $header, $match) === 1) {
+        $session = $admin->verifySession(trim($match[1]));
+
+        return ['role' => $session['role'], 'user' => $session['user'], 'via' => 'session'];
+    }
+
+    $admin->requireToken($_SERVER['HTTP_X_ADMIN_TOKEN'] ?? null);
+
+    return ['role' => strtolower($fallbackRole), 'user' => null, 'via' => 'admin-token'];
 }
 
 /** Absolute base URL of this API, used to build signed manage links. */
@@ -494,13 +514,13 @@ try {
 
         // ---------------------------------------------------------- admin (REQ-1.9)
         case $path === '/api/v1/admin/users' && $method === 'GET':
-            $admin->requireToken($_SERVER['HTTP_X_ADMIN_TOKEN'] ?? null);
-            $admin->requireCapability($actorRole, 'users.read');
+            $actor = resolveActor($admin, $actorRole);
+            $admin->requireCapability($actor['role'], 'users.read');
             respond(['users' => $admin->users()]);
 
         case $path === '/api/v1/admin/users' && $method === 'POST':
-            $admin->requireToken($_SERVER['HTTP_X_ADMIN_TOKEN'] ?? null);
-            $admin->requireCapability($actorRole, 'users.write');
+            $actor = resolveActor($admin, $actorRole);
+            $admin->requireCapability($actor['role'], 'users.write');
             $input = json_decode(file_get_contents('php://input') ?: '[]', true);
             if (!is_array($input)) {
                 respondError(400, 'MALFORMED_JSON', 'The request body must be a JSON object.');
@@ -508,8 +528,8 @@ try {
             respond($admin->createUser($input), 201);
 
         case preg_match('#^/api/v1/admin/users/(\d+)$#', $path, $matches) === 1 && in_array($method, ['PATCH', 'POST'], true):
-            $admin->requireToken($_SERVER['HTTP_X_ADMIN_TOKEN'] ?? null);
-            $admin->requireCapability($actorRole, 'users.write');
+            $actor = resolveActor($admin, $actorRole);
+            $admin->requireCapability($actor['role'], 'users.write');
             $input = json_decode(file_get_contents('php://input') ?: '[]', true);
             if (!is_array($input)) {
                 respondError(400, 'MALFORMED_JSON', 'The request body must be a JSON object.');
@@ -529,16 +549,36 @@ try {
             if (!is_array($input)) {
                 respondError(400, 'MALFORMED_JSON', 'The request body must be a JSON object.');
             }
-            respond(['user' => $admin->authenticate((string) ($input['email'] ?? ''), (string) ($input['password'] ?? ''))]);
+            respond($admin->login(
+                (string) ($input['email'] ?? ''),
+                (string) ($input['password'] ?? '')
+            ));
+
+        case $path === '/api/v1/admin/me' && $method === 'GET':
+            $actor = resolveActor($admin, $actorRole);
+            respond([
+                'user' => $actor['user'],
+                'role' => $actor['role'],
+                'via' => $actor['via'],
+                'capabilities' => $admin->capabilities($actor['role']),
+            ]);
+
+        case $path === '/api/v1/admin/logout' && $method === 'POST':
+            $actor = resolveActor($admin, $actorRole);
+            respond([
+                'logged_out' => true,
+                'note' => 'Sessions are stateless; discard the token on the client. Deactivate the user to revoke access.',
+                'user' => $actor['user'] === null ? null : ($actor['user']['email'] ?? null),
+            ]);
 
         case $path === '/api/v1/admin/settings' && $method === 'GET':
-            $admin->requireToken($_SERVER['HTTP_X_ADMIN_TOKEN'] ?? null);
-            $admin->requireCapability($actorRole, 'settings.read');
+            $actor = resolveActor($admin, $actorRole);
+            $admin->requireCapability($actor['role'], 'settings.read');
             respond(['settings' => $admin->settings((int) ($_GET['restaurant_id'] ?? 1))]);
 
         case $path === '/api/v1/admin/settings' && in_array($method, ['PATCH', 'POST'], true):
-            $admin->requireToken($_SERVER['HTTP_X_ADMIN_TOKEN'] ?? null);
-            $admin->requireCapability($actorRole, 'settings.write');
+            $actor = resolveActor($admin, $actorRole);
+            $admin->requireCapability($actor['role'], 'settings.write');
             $input = json_decode(file_get_contents('php://input') ?: '[]', true);
             if (!is_array($input)) {
                 respondError(400, 'MALFORMED_JSON', 'The request body must be a JSON object.');

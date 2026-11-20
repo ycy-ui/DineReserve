@@ -22,6 +22,12 @@ final class AdminService
     /** Fallback credential for local development; the deployment sets ADMIN_TOKEN. */
     public const DEFAULT_ADMIN_TOKEN = 'dev-admin-token';
 
+    /** Merchant session lifetime (stateless HMAC token, revoked by deactivating the user). */
+    public const SESSION_TTL_HOURS = 8;
+
+    /** Role priority used when a user holds several roles. */
+    public const ROLE_PRIORITY = ['administrator', 'manager', 'host', 'viewer', 'diner'];
+
     /** Roles and the capabilities each one grants. */
     public const CAPABILITIES = [
         'administrator' => [
@@ -255,6 +261,114 @@ final class AdminService
         $this->audit('user:' . $user['id'], 'auth.succeeded', 'user', (int) $user['id'], []);
 
         return $this->findUser((int) $user['id']);
+    }
+
+    // -------------------------------------------------------------- session
+
+    /**
+     * Merchant sign-in: verify the credentials and issue a stateless session token.
+     *
+     * @return array{token:string,expires_at:string,expires_in_hours:int,user:array<string,mixed>,role:string}
+     */
+    public function login(string $email, string $password): array
+    {
+        $user = $this->authenticate($email, $password);
+        $session = $this->issueSession($user);
+        $this->audit('user:' . $user['id'], 'session.issued', 'user', (int) $user['id'], [
+            'expires_at' => $session['expires_at'],
+            'role' => $session['role'],
+        ]);
+
+        return $session;
+    }
+
+    /**
+     * @param array<string,mixed> $user a user payload from authenticate()/findUser()
+     * @return array{token:string,expires_at:string,expires_in_hours:int,user:array<string,mixed>,role:string}
+     */
+    public function issueSession(array $user): array
+    {
+        $expires = $this->clock->now()->modify('+' . self::SESSION_TTL_HOURS . ' hours')->getTimestamp();
+        $payload = (int) $user['id'] . '.' . $expires;
+        $signature = substr(hash_hmac('sha256', $payload, $this->sessionSecret()), 0, 32);
+        $token = rtrim(strtr(base64_encode($payload . '.' . $signature), '+/', '-_'), '=');
+
+        return [
+            'token' => $token,
+            'expires_at' => Slot::iso8601($this->clock->now()->modify('+' . self::SESSION_TTL_HOURS . ' hours')),
+            'expires_in_hours' => self::SESSION_TTL_HOURS,
+            'user' => $user,
+            'role' => $this->primaryRole($user['roles'] ?? []),
+        ];
+    }
+
+    /**
+     * @return array{user:array<string,mixed>,role:string,expires_at:string}
+     */
+    public function verifySession(string $token): array
+    {
+        $token = trim($token);
+        $raw = $token === '' ? false : base64_decode(strtr($token, '-_', '+/'), true);
+        if ($raw === false) {
+            throw $this->invalidSession();
+        }
+        $parts = explode('.', $raw);
+        if (count($parts) !== 3) {
+            throw $this->invalidSession();
+        }
+        [$userId, $expires, $signature] = $parts;
+        if (!preg_match('/^\d+$/', $userId) || !preg_match('/^\d+$/', $expires)) {
+            throw $this->invalidSession();
+        }
+        $expected = substr(hash_hmac('sha256', $userId . '.' . $expires, $this->sessionSecret()), 0, 32);
+        if (!hash_equals($expected, (string) $signature)) {
+            throw $this->invalidSession();
+        }
+        if ((int) $expires < $this->clock->now()->getTimestamp()) {
+            throw new DomainException('SESSION_EXPIRED', 'The merchant session has expired; please sign in again.', [], 401);
+        }
+        $user = $this->findUser((int) $userId);
+        if (!$user['active']) {
+            throw new DomainException('SESSION_INVALID', 'This account is no longer active.', [], 401);
+        }
+
+        return [
+            'user' => $user,
+            'role' => $this->primaryRole($user['roles']),
+            'expires_at' => Slot::iso8601((new \DateTimeImmutable('@' . (int) $expires))->setTimezone(new \DateTimeZone('UTC'))),
+        ];
+    }
+
+    /** The strongest role a user holds, used for capability checks. */
+    public function primaryRole(array $roles): string
+    {
+        $roles = array_map(static fn ($role): string => strtolower((string) $role), $roles);
+        foreach (self::ROLE_PRIORITY as $candidate) {
+            if (in_array($candidate, $roles, true)) {
+                return $candidate;
+            }
+        }
+
+        // No admin role at all: stay a diner, which grants no admin capability.
+        return 'diner';
+    }
+
+    private function invalidSession(): DomainException
+    {
+        return new DomainException('SESSION_INVALID', 'The merchant session token is invalid.', [], 401);
+    }
+
+    private function sessionSecret(): string
+    {
+        $secret = getenv('SESSION_SECRET');
+        if ($secret === false || $secret === '') {
+            $secret = getenv('ADMIN_TOKEN');
+        }
+        if ($secret === false || $secret === '') {
+            $secret = self::DEFAULT_ADMIN_TOKEN;
+        }
+
+        return (string) $secret;
     }
 
     // ------------------------------------------------------------- settings

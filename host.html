@@ -31,6 +31,9 @@
   button:disabled { opacity: .5; cursor: default; }
   .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); display: inline-block; }
   .dot.stale { background: #d9534f; }
+  .whoami { font-size: 12px; background: var(--green-soft); color: var(--ink-2); border-radius: 999px; padding: 5px 10px; }
+  .whoami b { color: var(--ink); }
+  a.logout { font-size: 12px; color: #8a4b2c; text-decoration: none; border-bottom: 1px dashed #d8b9a6; }
 
   .modebar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 8px 22px;
              font-size: 12.5px; border-bottom: 1px solid var(--line); background: #fffdf5; color: #6b5a2e; }
@@ -96,7 +99,9 @@
   <button class="ghost" id="refresh">刷新</button>
   <span class="spacer"></span>
   <label><span class="dot" id="live"></span> 每 5 秒自动刷新</label>
-  <label>管理令牌 <input id="token" placeholder="X-Admin-Token" style="width:170px"></label>
+  <label>管理令牌 <input id="token" placeholder="X-Admin-Token" style="width:150px"></label>
+  <span id="who" class="whoami" hidden></span>
+  <a id="logout" class="logout" href="login.html" hidden>退出</a>
 </header>
 
 <div class="modebar" id="modebar">
@@ -183,6 +188,7 @@
 
   let mode = null;          // 'live' | 'demo'
   let snapshot = null;
+  let session = params.get('session') || '';   // merchant session token (Authorization: Bearer)
   let currentDate = new Date().toISOString().slice(0, 10);
   let currentTime = '19:00';
 
@@ -196,7 +202,10 @@
   };
 
   const token = () => $('token').value.trim();
-  const adminHeaders = () => (token() ? { 'X-Admin-Token': token() } : {});
+  const adminHeaders = () => {
+    if (session) return { Authorization: 'Bearer ' + session };
+    return token() ? { 'X-Admin-Token': token() } : {};
+  };
 
   // ------------------------------------------------------------ transport
   const fetchJSON = async (path, options = {}) => {
@@ -281,7 +290,22 @@
       $('retry-api').hidden = false;
     }
     $('token').placeholder = mode === 'live' ? 'X-Admin-Token' : '离线演示无需令牌';
-    $('token').disabled = mode === 'demo';
+    $('token').disabled = mode === 'demo' || !!session;
+
+    if (mode === 'live' && session) {
+      fetch('/api/v1/admin/me', { headers: { Authorization: 'Bearer ' + session } })
+        .then((response) => (response.ok ? response.json() : null))
+        .then((me) => {
+          if (!me || !me.user) { $('who').hidden = true; return; }
+          $('who').innerHTML = '已登录 <b>' + me.user.email + '</b> · ' + me.role;
+          $('who').hidden = false;
+          $('logout').hidden = false;
+        })
+        .catch(() => {});
+    } else {
+      $('who').hidden = true;
+      $('logout').hidden = true;
+    }
   }
 
   // -------------------------------------------------------------- render

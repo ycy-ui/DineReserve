@@ -449,7 +449,70 @@ curl -s "http://127.0.0.1:8080/api/v1/bookings/ZUYPMHXY?email=chan@example.com"
 
 ---
 
-## 8. Run it locally (three commands)
+## 8. Merchant authentication (login + bearer session)
+
+The merchant API (`/api/v1/admin/*`) accepts two credentials:
+
+1. **Session token** from the login endpoint — what the console uses.
+2. **Deployment token** in `X-Admin-Token` — for scripts/CI (kept for automation).
+
+### 8.1 POST `/api/v1/admin/login`
+
+```bash
+curl -s -X POST http://127.0.0.1:8080/api/v1/admin/login \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"manager@dinereserve.local","password":"DemoPass123!"}'
+```
+
+```json
+{
+  "token": "MS4xNzk1MTkzMzI2LmE1NTEzYTBi…",
+  "expires_at": "2026-11-20T23:36:00+08:00",
+  "expires_in_hours": 8,
+  "role": "manager",
+  "user": { "id": 1, "name": "Demo Manager", "email": "manager@dinereserve.local", "active": true, "roles": ["manager"] }
+}
+```
+
+- Wrong credentials → `401 INVALID_CREDENTIALS` (same message for unknown e-mail and wrong password).
+- The session is a stateless HMAC-SHA256 token (user id + expiry) signed with `SESSION_SECRET`
+  (falls back to `ADMIN_TOKEN`); deactivating the user revokes it immediately.
+- Demo accounts: `manager@…`, `host@…`, `admin@…` / `DemoPass123!`.
+
+### 8.2 Using the session
+
+Send `Authorization: Bearer <token>` on every merchant call. Capabilities come from the
+user's strongest role (`administrator` → `manager` → `host` → `viewer`).
+
+```bash
+TOKEN=$(curl -s -X POST …/admin/login -H 'Content-Type: application/json' \
+  -d '{"email":"manager@dinereserve.local","password":"DemoPass123!"}' | jq -r .token)
+
+curl -s -H "Authorization: Bearer $TOKEN" http://127.0.0.1:8080/api/v1/admin/me
+curl -s -H "Authorization: Bearer $TOKEN" "http://127.0.0.1:8080/api/v1/admin/settings?restaurant_id=1"
+```
+
+| Endpoint | Purpose | Capability |
+|---|---|---|
+| `GET /api/v1/admin/me` | session user, role and capabilities | any valid session |
+| `POST /api/v1/admin/logout` | acknowledge sign-out (client discards the token) | any valid session |
+| `GET /api/v1/admin/users` | list users with roles | `users.read` (administrator) |
+| `POST /api/v1/admin/users` | create a user | `users.write` (administrator) |
+| `PATCH /api/v1/admin/users/{id}` | change role / deactivate | `users.write` (administrator) |
+| `GET /api/v1/admin/settings` | read policy settings | `settings.read` (administrator, manager) |
+| `PATCH /api/v1/admin/settings` | change policy settings | `settings.write` (administrator) |
+
+### 8.3 Errors
+
+| Status | Code | Meaning |
+|---|---|---|
+| 401 | `INVALID_CREDENTIALS` | wrong e-mail/password |
+| 401 | `SESSION_INVALID` | malformed, tampered or revoked session |
+| 401 | `SESSION_EXPIRED` | the 8-hour session has expired — sign in again |
+| 401 | `UNAUTHORIZED` | no session and no valid `X-Admin-Token` |
+| 403 | `FORBIDDEN` | the role does not hold the required capability |
+
+## 9. Run it locally (three commands)
 
 Prerequisites: PHP 8.1+ with `pdo_sqlite` (the demo/tests) or `pdo_mysql` (TastyIgniter deployment).
 `composer install` is optional: `bootstrap/autoload.php` falls back to a PSR-4 autoloader so the
@@ -471,7 +534,7 @@ curl -s "http://127.0.0.1:8080/api/v1/availability?restaurant_id=1&date=2026-11-
 
 ---
 
-## 9. Implementation status (keep this table honest)
+## 10. Implementation status (keep this table honest)
 
 | Endpoint | Contract | Implementation | Test evidence |
 |---|---|---|---|
@@ -488,7 +551,7 @@ the shapes documented above (a fresh seed reports 28 available 6-seat-or-larger 
 
 ---
 
-## 10. Compatibility notes
+## 11. Compatibility notes
 
 - Field names are **snake_case** and stable; clients must ignore unknown fields (forward compatible).
 - New optional response fields may be added in v1; removing or renaming a field is a v2 change.
