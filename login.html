@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DineReserve · 选择入口</title>
+<style>
+  :root {
+    --ink: #0e3b2e;
+    --ink-2: #244a3d;
+    --green: #189e6c;
+    --green-soft: #e8f1ec;
+    --line: #dfe8e2;
+    --paper: #f6f8f6;
+    --shadow: 0 16px 40px rgba(14, 59, 46, .10);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; display: flex; flex-direction: column;
+    background:
+      radial-gradient(1100px 600px at 80% -10%, #e8f1ec 0%, transparent 60%),
+      radial-gradient(900px 500px at -10% 110%, #eef4ef 0%, transparent 55%),
+      var(--paper);
+    color: var(--ink);
+    font-family: "Helvetica Neue", "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+  }
+  header { padding: 26px 34px; display: flex; align-items: center; gap: 12px; }
+  .logo {
+    width: 38px; height: 38px; border-radius: 11px; background: var(--ink);
+    color: #fff; display: grid; place-items: center; font-size: 19px;
+  }
+  .brand { font-weight: 800; font-size: 21px; letter-spacing: -.01em; }
+  .tag { font-size: 11px; letter-spacing: .14em; background: var(--green-soft); color: var(--ink-2);
+         padding: 5px 9px; border-radius: 999px; font-weight: 700; }
+  header .spacer { flex: 1; }
+  header a { color: var(--ink-2); font-size: 13px; text-decoration: none; border-bottom: 1px dashed #b9c9c1; }
+
+  main { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 10px 24px 50px; }
+  .intro { text-align: center; max-width: 720px; margin-bottom: 30px; }
+  .intro h1 { font-size: 34px; margin: 0 0 10px; letter-spacing: -.02em; }
+  .intro p { margin: 0; color: #5e766e; font-size: 15px; line-height: 1.65; }
+
+  .cards { display: grid; grid-template-columns: repeat(2, minmax(300px, 380px)); gap: 22px; width: 100%; justify-content: center; }
+  @media (max-width: 760px) { .cards { grid-template-columns: 1fr; } .intro h1 { font-size: 27px; } }
+
+  .card {
+    background: #fff; border: 1px solid var(--line); border-radius: 20px; padding: 26px 24px 22px;
+    box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 12px;
+  }
+  .card .icon {
+    width: 46px; height: 46px; border-radius: 13px; display: grid; place-items: center; font-size: 22px;
+    background: var(--green-soft);
+  }
+  .card.merchant .icon { background: #eef3fb; }
+  .card h2 { margin: 2px 0 0; font-size: 21px; }
+  .card .sub { color: #5e766e; font-size: 13.5px; line-height: 1.6; margin: 0; }
+  .card ul { margin: 2px 0 6px; padding-left: 18px; color: #40584f; font-size: 13px; line-height: 1.7; }
+  .card .actions { margin-top: auto; display: flex; flex-direction: column; gap: 9px; }
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    border: 0; border-radius: 11px; padding: 12px 16px; font: inherit; font-weight: 700;
+    background: var(--ink); color: #fff; cursor: pointer; text-decoration: none;
+  }
+  .btn:hover { background: #1b5541; }
+  .btn.ghost { background: #fff; color: var(--ink); border: 1px solid var(--line); font-weight: 600; }
+  .field { display: grid; gap: 6px; }
+  .field label { font-size: 12px; color: #5e766e; }
+  .field input {
+    width: 100%; padding: 10px 11px; border: 1px solid var(--line); border-radius: 10px; font: inherit;
+  }
+  .error { color: #8a2c2c; font-size: 12.5px; min-height: 18px; }
+  .hint { font-size: 11.5px; color: #6b8078; line-height: 1.55; }
+  code { font-family: Consolas, Menlo, monospace; background: var(--green-soft); padding: 1px 5px; border-radius: 4px; font-size: .94em; }
+
+  footer { padding: 18px 34px 26px; color: #6b8078; font-size: 12px; text-align: center; }
+  footer a { color: var(--ink-2); text-decoration: none; border-bottom: 1px dashed #b9c9c1; }
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">🍽</div>
+  <div class="brand">DineReserve</div>
+  <span class="tag">ENTRY</span>
+  <span class="spacer"></span>
+  <a href="index.html">项目主页</a>
+</header>
+
+<main>
+  <div class="intro">
+    <h1>选择入口</h1>
+    <p>同一套订位引擎，两个入口：<b>客人</b>在线查空桌、订位、改期取消；<b>商家</b>看平面图、接电话单、管理候补与报表。</p>
+  </div>
+
+  <div class="cards">
+    <section class="card">
+      <div class="icon">🧑‍🍳</div>
+      <h2>客人 · Diner</h2>
+      <p class="sub">无需登录，选日期、时间与人数即可查看实时空桌并完成订位。</p>
+      <ul>
+        <li>15 分钟起订网格 · 提前 90 天</li>
+        <li>8 位订位号 + 截止时间 + 提醒</li>
+        <li>凭签名链接自助改期 / 取消</li>
+      </ul>
+      <div class="actions">
+        <a class="btn" href="demo.html">进入客人端 →</a>
+        <span class="hint">订位数据保存在本机浏览器（静态演示）；真实系统通过 API 落库。</span>
+      </div>
+    </section>
+
+    <section class="card merchant">
+      <div class="icon">🖥️</div>
+      <h2>商家 · Merchant</h2>
+      <p class="sub">前台控制台：平面图、入座 / 爽约 / 释放、电话预订、候补、报表。</p>
+      <ul>
+        <li>实时平面图（每 5 秒刷新）</li>
+        <li>电话单与候补队列</li>
+        <li>占用 / 风险报表</li>
+      </ul>
+      <div class="actions">
+        <div class="field">
+          <label for="token">管理令牌（部署时由管理员配置）</label>
+          <input id="token" type="password" placeholder="X-Admin-Token" autocomplete="current-password">
+        </div>
+        <div class="error" id="error"></div>
+        <button class="btn" id="enter-merchant">进入商家端 →</button>
+        <span class="hint">本地演示默认令牌 <code>dev-admin-token</code>；上线前必须修改 <code>ADMIN_TOKEN</code>。</span>
+      </div>
+    </section>
+  </div>
+</main>
+
+<footer>
+  Group 6 · 澳门科技大学 计算机科学与工程学院 ·
+  <a href="index.html">项目主页</a> ·
+  <a href="https://github.com/ycy-ui/DineReserve">GitHub</a>
+</footer>
+
+<script>
+(() => {
+  const error = document.getElementById('error');
+  const input = document.getElementById('token');
+  const button = document.getElementById('enter-merchant');
+
+  // Allow ?token=… so a bookmark or the deployment can pre-fill it.
+  const fromUrl = new URLSearchParams(location.search).get('token');
+  if (fromUrl) input.value = fromUrl;
+
+  const go = async () => {
+    const token = input.value.trim();
+    error.textContent = '';
+    if (!token) {
+      error.textContent = '请输入商家管理令牌。';
+      return;
+    }
+    button.disabled = true;
+    try {
+      const response = await fetch('/api/v1/admin/users', {
+        headers: { 'X-Admin-Token': token },
+      });
+      if (response.status === 401) {
+        error.textContent = '令牌不正确，请向管理员索取。';
+        return;
+      }
+      if (!response.ok) {
+        error.textContent = '服务暂时不可用（' + response.status + '），请稍后再试。';
+        return;
+      }
+      location.href = 'host.html?token=' + encodeURIComponent(token);
+    } catch (e) {
+      error.textContent = '无法连接 API：' + (e && e.message ? e.message : '网络错误');
+    } finally {
+      button.disabled = false;
+    }
+  };
+
+  button.addEventListener('click', go);
+  input.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') go();
+  });
+})();
+</script>
+</body>
+</html>
