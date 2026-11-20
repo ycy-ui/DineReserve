@@ -24,7 +24,7 @@ concurrency test synchronises two forked processes on a barrier file.
 
 ```bash
 composer install
-vendor/bin/phpunit --do-not-cache-result                      # all 191 tests
+vendor/bin/phpunit --do-not-cache-result                      # all 199 tests
 vendor/bin/phpunit --filter Availability                      # REQ-1.1 rules
 vendor/bin/phpunit --filter Booking                           # REQ-1.2 rules
 vendor/bin/phpunit tests/BookingConcurrencyTest.php           # fork-based concurrency
@@ -50,7 +50,8 @@ The same suite runs on every push and pull request in `.github/workflows/ci.yml`
 | `tests/RiskScorerTest.php` | 13 | 55 | 0.55 s | **REQ-1.8** explainable no-show risk |
 | `tests/AdminServiceTest.php` | 13 | 69 | 0.40 s | **REQ-1.9** users, roles, settings |
 | `tests/NfrTest.php` | 12 | 24 | 1.20 s | 27 NFRs: latency, backup, capacity, security |
-| **Total** | **191** | **1271** | **9.30 s** | |
+| `tests/PilotTest.php` | 8 | 40 | 2.10 s | W13 pilot rehearsal and invariants |
+| **Total** | **199** | **1311** | **11.40 s** | |
 
 Status: **all green**, no warnings, notices or deprecations (`failOnWarning`/`failOnNotice` enabled in
 `phpunit.xml`), so a silent PHP 8.2/8.3 deprecation cannot slip into CI.
@@ -197,12 +198,24 @@ connection and asserts the table/date holds exactly one booking and that `bookin
 | Input is treated as data (no SQL injection) | `NfrTest::testPreparedStatementsTreatInjectionInputAsData`, `bin/security-check.php` |
 | Administrative actions leave an audit trail | `NfrTest::testAuditTrailRecordsAdministrativeActions` |
 
+## 5h. W13 pilot — rehearsal invariants
+
+| Invariant | Test(s) |
+|---|---|
+| The rehearsal runs clean and every created booking exists once | `PilotTest::testThePilotServiceRunsClean`, `testEveryCreatedBookingStillExistsOnce` |
+| No table is double booked | `testTheServiceNeverDoubleBooksATable` |
+| The report agrees with the booking rows | `testTheReportAgreesWithTheBookingRows` |
+| Waitlist offers are produced and resolved | `testTheWaitlistProducesOffersAndResolvesThem` |
+| Notifications are all accounted for (0 failed) | `testNotificationsAreAllAccountedFor` |
+| Every booking change leaves an event | `testEveryBookingChangeLeavesAnEvent` |
+| A backup restores to a working copy | `testBackupRestorePassesWhenTheDatabaseIsAFile` |
+
 ## 6. Not covered yet (honest list)
 
 | Item | Status | Planned |
 |---|---|---|
-| Pilot service (W13) and the v1.0 delivery drill (W14) | scheduled | W13–W14 |
-| The admin UI | the API and CLI exist; the screens ship with the TastyIgniter dashboard in W13 | W13 |
+| The real restaurant pilot and the v1.0.0 release | scheduled | W14 |
+| The admin UI | the API and CLI exist; the screens ship with the TastyIgniter dashboard in W14 | W14 |
 | Waitlist offers are delivered by e-mail only (no SMS/push yet) | e-mail via the W8 Mailer port | W12 (pilot) |
 | Real SMTP delivery | `FileMailer` writes to `storage/mail.log`; the production adapter is bound in the TastyIgniter build | W12 (pilot) |
 | Notifications for change/cancel are only queued in `notification_log` (template rows); delivery and reminder rescheduling arrive with REQ-1.4 | queued only | W8 |
@@ -218,7 +231,7 @@ connection and asserts the table/date holds exactly one booking and that `bookin
 
 `.github/workflows/ci.yml` runs three jobs for every push and pull request:
 
-1. **PHP 8.2 · PHPUnit · SQLite** — dependency install, `php -l` on every file, the 191 tests above, then
+1. **PHP 8.2 · PHPUnit · SQLite** — dependency install, `php -l` on every file, the 199 tests above, then
    an HTTP smoke test against the running API (`health` → `availability` → `POST booking` → read it back).
 2. **MySQL 8.0 · schema + seed** — the MySQL dialect DDL is applied and the seed is written through the
    same application code, asserting 60 tables and 3 service periods.

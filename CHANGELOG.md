@@ -4,6 +4,22 @@ All notable changes to DineReserve are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 weeks refer to the 14-week plan in [`docs/02-architecture.md`](docs/02-architecture.md) and the Task 1 proposal.
 
+## [0.8.0] - 2026-11-20 — Week 13: pilot rehearsal and code freeze
+
+### Added (W13)
+- `PilotService`: replays one dinner service on a disposable copy of the demo restaurant —
+  12 table bookings across online/phone, waitlist entries, cancellations that release offers,
+  offer acceptance and expiry, seating, a walk-in, a no-show, a release, notification dispatch,
+  the daily report and a backup/restore check.
+- Eight operational invariants are asserted (no double booking, known statuses, report = bookings,
+  utilisation bounds, floor plan vs seated bookings, every booking created once, notifications
+  accounted for, events recorded) plus the backup restore; a failed check exits non-zero.
+- `bin/pilot.php` CLI (`--db`, `--date`, `--backup`, `--report`) generating the pilot record.
+- `docs/09-pilot-runbook.md` (scope, roles, checklists, timeline, monitoring, rollback, rehearsal
+  record, post-pilot review) and `docs/10-code-freeze.md` (freeze scope, exceptions, v1.0-rc
+  checklist, sign-off).
+- `tests/PilotTest.php`: 8 tests (199 total).
+
 ## [0.7.0] - 2026-11-19 — Week 12: administration and NFR validation (REQ-1.9)
 
 ### Added (W12 · REQ-1.9)
@@ -182,6 +198,7 @@ weeks refer to the 14-week plan in [`docs/02-architecture.md`](docs/02-architect
 - Change/cancel (REQ-1.3), waitlist (REQ-1.5), floor plan (REQ-1.6), reporting (REQ-1.7),
   risk scoring (REQ-1.8) and administration (REQ-1.9) remain planned for W7–W11.
 
+[0.8.0]: https://github.com/ycy-ui/DineReserve/releases/tag/v0.8.0
 [0.7.0]: https://github.com/ycy-ui/DineReserve/releases/tag/v0.7.0
 [0.6.0]: https://github.com/ycy-ui/DineReserve/releases/tag/v0.6.0
 [0.5.0]: https://github.com/ycy-ui/DineReserve/releases/tag/v0.5.0

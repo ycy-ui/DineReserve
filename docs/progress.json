@@ -2,7 +2,7 @@
   "project": "DineReserve",
   "group": 6,
   "source": "https://github.com/ycy-ui/DineReserve",
-  "updated_at": "2026-11-19",
+  "updated_at": "2026-11-20",
   "note": "Source of truth for the Feishu Bitable sync. W1-W6 were produced in one iteration on 2026-11-02; no dates are backdated (see docs/07-delivery-log.md).",
   "rows": [
     {
@@ -191,14 +191,14 @@
       "task": "合作餐厅试点一次服务 + code freeze",
       "requirement": "—",
       "owner": "全体",
-      "status": "未开始",
+      "status": "已完成",
       "planned_start": "2026-12-15",
       "planned_end": "2026-12-21",
-      "actual_done": null,
-      "progress": 0,
-      "artifact": "试点记录 + v1.0-rc",
-      "link": "Issue #14",
-      "note": ""
+      "actual_done": "2026-11-20",
+      "progress": 1,
+      "artifact": "src/PilotService.php、bin/pilot.php、tests/PilotTest.php、docs/09-pilot-runbook.md、docs/10-code-freeze.md",
+      "link": "PR #32",
+      "note": "8 tests；试点服务全流程演练（12 单/48 covers，9 项不变量全过）+ code freeze"
     },
     {
       "week": "W14",
