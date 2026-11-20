@@ -1,0 +1,440 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DineReserve · 商家端（前台 / Host）</title>
+<style>
+  :root {
+    --ink: #0e3b2e;
+    --ink-2: #244a3d;
+    --green: #189e6c;
+    --green-soft: #e8f1ec;
+    --line: #dfe8e2;
+    --paper: #f6f8f6;
+    --free: #e8f1ec;
+    --occupied: #fdecec;
+    --cleaning: #fff4e0;
+    --blocked: #ececec;
+    --maintenance: #efe9f7;
+    --shadow: 0 10px 30px rgba(14, 59, 46, .08);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--paper); color: var(--ink);
+    font-family: "Helvetica Neue", "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+  }
+  header {
+    display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+    padding: 14px 22px; background: #fff; border-bottom: 1px solid var(--line);
+    position: sticky; top: 0; z-index: 10;
+  }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 18px; }
+  .brand .logo {
+    width: 30px; height: 30px; border-radius: 9px; background: var(--ink);
+    color: #fff; display: grid; place-items: center; font-size: 15px;
+  }
+  .tag { font-size: 11px; letter-spacing: .12em; background: var(--green-soft); color: var(--ink-2);
+         padding: 4px 8px; border-radius: 999px; font-weight: 600; }
+  .spacer { flex: 1; }
+  header label { font-size: 12px; color: #5e766e; display: flex; align-items: center; gap: 6px; }
+  input, select, button, textarea { font: inherit; }
+  input, select {
+    border: 1px solid var(--line); border-radius: 9px; padding: 7px 9px; background: #fff; color: var(--ink);
+  }
+  button {
+    border: 0; border-radius: 9px; padding: 8px 12px; cursor: pointer;
+    background: var(--ink); color: #fff; font-weight: 600;
+  }
+  button.ghost { background: #fff; color: var(--ink); border: 1px solid var(--line); font-weight: 500; }
+  button.mini { padding: 5px 9px; font-size: 12px; }
+  button:disabled { opacity: .5; cursor: default; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); display: inline-block; }
+  .dot.stale { background: #d9534f; }
+
+  main { display: grid; grid-template-columns: 1fr 380px; gap: 18px; padding: 18px 22px 40px; }
+  @media (max-width: 1080px) { main { grid-template-columns: 1fr; } }
+
+  .summary { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+  .chip {
+    background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 8px 12px;
+    font-size: 13px; display: flex; align-items: center; gap: 8px;
+  }
+  .chip b { font-size: 16px; }
+  .chip .swatch { width: 10px; height: 10px; border-radius: 3px; }
+
+  .areas { display: grid; gap: 14px; }
+  .area { background: #fff; border: 1px solid var(--line); border-radius: 16px; padding: 12px; }
+  .area h3 { margin: 2px 0 10px; font-size: 14px; letter-spacing: .06em; text-transform: uppercase; color: #5e766e; }
+  .tables { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+  .table {
+    border: 1px solid var(--line); border-radius: 12px; padding: 10px; background: var(--free);
+    display: flex; flex-direction: column; gap: 6px; min-height: 118px;
+  }
+  .table.OCCUPIED { background: var(--occupied); border-color: #f3c9c9; }
+  .table.CLEANING { background: var(--cleaning); border-color: #f0dcb0; }
+  .table.BLOCKED { background: var(--blocked); }
+  .table.MAINTENANCE { background: var(--maintenance); }
+  .table .top { display: flex; align-items: baseline; justify-content: space-between; }
+  .table .code { font-weight: 800; font-size: 15px; }
+  .table .seats { font-size: 11px; color: #5e766e; }
+  .table .status { font-size: 10px; letter-spacing: .08em; font-weight: 700; color: #5e766e; }
+  .table .who { font-size: 11.5px; line-height: 1.35; color: var(--ink-2); }
+  .table .who b { font-size: 12px; }
+  .table .actions { display: flex; gap: 5px; flex-wrap: wrap; margin-top: auto; }
+
+  .panel { background: #fff; border: 1px solid var(--line); border-radius: 16px; padding: 14px; align-self: start; }
+  .tabs { display: flex; gap: 6px; margin-bottom: 12px; }
+  .tabs button { background: var(--green-soft); color: var(--ink-2); }
+  .tabs button.active { background: var(--ink); color: #fff; }
+  .field { display: grid; gap: 5px; margin-bottom: 10px; }
+  .field label { font-size: 12px; color: #5e766e; }
+  .field input, .field select { width: 100%; }
+  .row { display: flex; gap: 8px; }
+  .row > * { flex: 1; }
+  .hint { font-size: 11.5px; color: #6b8078; line-height: 1.5; }
+  pre {
+    background: var(--green-soft); border-radius: 10px; padding: 10px; font-size: 11px;
+    max-height: 260px; overflow: auto; margin: 10px 0 0; white-space: pre-wrap;
+  }
+  .toast {
+    position: fixed; right: 18px; bottom: 18px; background: var(--ink); color: #fff;
+    padding: 11px 14px; border-radius: 12px; font-size: 13px; opacity: 0; transform: translateY(8px);
+    transition: .2s; pointer-events: none; max-width: 380px; z-index: 50;
+  }
+  .toast.show { opacity: 1; transform: none; }
+  .toast.err { background: #8a2c2c; }
+  .legend { display: flex; gap: 10px; flex-wrap: wrap; font-size: 11.5px; color: #5e766e; margin-top: 10px; }
+  .legend span { display: flex; align-items: center; gap: 5px; }
+  .legend i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand"><div class="logo">🍽</div>DineReserve <span class="tag">HOST CONSOLE</span></div>
+  <label>日期 <input type="date" id="date"></label>
+  <label>时间 <input type="time" id="time" step="900" value="19:00"></label>
+  <button class="ghost" id="refresh">刷新</button>
+  <span class="spacer"></span>
+  <label><span class="dot" id="live"></span> 每 5 秒自动刷新</label>
+  <label>管理令牌 <input id="token" placeholder="X-Admin-Token" style="width:170px"></label>
+</header>
+
+<main>
+  <section>
+    <div class="summary" id="summary"></div>
+    <div class="areas" id="areas"></div>
+    <div class="legend">
+      <span><i style="background:var(--free)"></i>FREE 空闲</span>
+      <span><i style="background:var(--occupied)"></i>OCCUPIED 已入座</span>
+      <span><i style="background:var(--cleaning)"></i>CLEANING 待清理</span>
+      <span><i style="background:var(--blocked)"></i>BLOCKED 停用</span>
+      <span><i style="background:var(--maintenance)"></i>MAINTENANCE 维修</span>
+    </div>
+  </section>
+
+  <aside class="panel">
+    <div class="tabs">
+      <button data-tab="book" class="active">电话预订</button>
+      <button data-tab="report">报表</button>
+      <button data-tab="wait">候补</button>
+    </div>
+
+    <div id="tab-book">
+      <div class="field"><label>日期</label><input type="date" id="b-date"></div>
+      <div class="row">
+        <div class="field"><label>开始时间</label><input type="time" id="b-time" step="900" value="19:00"></div>
+        <div class="field"><label>人数</label><input type="number" id="b-party" min="1" max="20" value="2"></div>
+      </div>
+      <div class="field"><label>桌位（先查空桌）</label><select id="b-table"><option value="">— 点击“查空桌” —</option></select></div>
+      <div class="field"><label>客人姓名</label><input id="b-name" placeholder="例如 Chan Tai Man"></div>
+      <div class="field"><label>邮箱（发送确认与提醒）</label><input id="b-email" type="email" placeholder="guest@example.com"></div>
+      <div class="row">
+        <button id="check-avail">查空桌</button>
+        <button id="create-booking">创建订位</button>
+      </div>
+      <p class="hint">走「电话预订」渠道，客人的确认信与 24h/2h 提醒会自动排队；创建后把 8 位订位号告诉客人。</p>
+      <pre id="book-out" hidden></pre>
+      <div id="avail-list" class="hint"></div>
+    </div>
+
+    <div id="tab-report" hidden>
+      <div class="row">
+        <button id="load-occ">占用报表</button>
+        <button id="load-risk">风险报表</button>
+      </div>
+      <p class="hint">占用报表需要管理令牌；风险报表可匿名读取。</p>
+      <pre id="report-out" hidden></pre>
+    </div>
+
+    <div id="tab-wait" hidden>
+      <div class="field"><label>客人姓名</label><input id="w-name" placeholder="候补客人"></div>
+      <div class="row">
+        <div class="field"><label>人数</label><input type="number" id="w-party" min="1" value="2"></div>
+        <div class="field"><label>时间</label><input type="time" id="w-time" step="900" value="19:00"></div>
+      </div>
+      <div class="field"><label>邮箱</label><input id="w-email" type="email" placeholder="guest@example.com"></div>
+      <button id="join-wait">加入候补队列</button>
+      <p class="hint">有人取消时，队首客人会收到 5 分钟有效的报价邮件；接受后自动转为订位。</p>
+      <pre id="wait-out" hidden></pre>
+    </div>
+  </aside>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const API = (path, options = {}) => fetch(path, {
+    headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
+    ...options,
+  }).then(async (res) => {
+    const text = await res.text();
+    let body = null;
+    try { body = text ? JSON.parse(text) : null; } catch (e) { body = { raw: text }; }
+    if (!res.ok) {
+      const err = body && body.error ? body.error : { code: 'HTTP_' + res.status, message: text };
+      throw err;
+    }
+    return body;
+  });
+
+  let toastTimer = null;
+  const toast = (message, isError = false) => {
+    const el = $('toast');
+    el.textContent = message;
+    el.classList.toggle('err', isError);
+    el.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.classList.remove('show'), 3600);
+  };
+
+  const todayISO = () => new Date().toISOString().slice(0, 10);
+  const token = () => $('token').value.trim();
+  const adminHeaders = () => (token() ? { 'X-Admin-Token': token() } : {});
+
+  let snapshot = null;
+  let currentDate = todayISO();
+  let currentTime = '19:00';
+
+  const money = (value) => Number(value || 0);
+
+  function renderSummary(summary) {
+    const chips = [
+      ['FREE', summary.free, 'var(--free)'],
+      ['OCCUPIED', summary.occupied, 'var(--occupied)'],
+      ['CLEANING', summary.cleaning, 'var(--cleaning)'],
+      ['BLOCKED', summary.blocked, 'var(--blocked)'],
+      ['MAINTENANCE', summary.maintenance, 'var(--maintenance)'],
+      ['今日订位', summary.booked_today, 'var(--green-soft)'],
+    ];
+    $('summary').innerHTML = chips.map(([label, value, color]) =>
+      `<div class="chip"><span class="swatch" style="background:${color};border:1px solid var(--line)"></span>${label} <b>${value}</b></div>`
+    ).join('');
+  }
+
+  function bookingLine(booking) {
+    if (!booking) return '';
+    const name = booking.guest && booking.guest.name ? booking.guest.name : booking.reference;
+    return `<div class="who"><b>${name}</b> · ${booking.party_size}p<br>${booking.start}–${booking.end} · ${booking.status}<br>${booking.reference}</div>`;
+  }
+
+  function tableCard(table) {
+    const booking = table.current_booking || table.upcoming_booking;
+    const actions = [];
+    if (booking) {
+      actions.push(`<button class="mini" data-act="seat" data-ref="${booking.reference}">入座</button>`);
+      if (table.status === 'FREE') {
+        actions.push(`<button class="mini ghost" data-act="noshow" data-ref="${booking.reference}">爽约</button>`);
+      }
+    }
+    if (table.status === 'OCCUPIED' || table.status === 'CLEANING') {
+      actions.push(`<button class="mini ghost" data-act="release" data-table="${table.id}">释放</button>`);
+    }
+    return `<div class="table ${table.status}">
+      <div class="top"><span class="code">${table.code}</span><span class="seats">${table.seats} 座</span></div>
+      <div class="status">${table.status}</div>
+      ${bookingLine(booking)}
+      <div class="actions">${actions.join('')}</div>
+    </div>`;
+  }
+
+  function renderFloor(floor) {
+    const areas = {};
+    for (const table of floor.tables) {
+      (areas[table.area] = areas[table.area] || []).push(table);
+    }
+    $('areas').innerHTML = Object.entries(areas).map(([area, tables]) => `
+      <div class="area">
+        <h3>${area} · ${tables.length} 桌</h3>
+        <div class="tables">${tables.map(tableCard).join('')}</div>
+      </div>`).join('');
+  }
+
+  async function refresh() {
+    try {
+      const floor = await API(`/api/v1/floorplan?restaurant_id=1&date=${currentDate}&time=${currentTime}`);
+      snapshot = floor;
+      renderSummary(floor.summary);
+      renderFloor(floor);
+      $('live').classList.remove('stale');
+    } catch (error) {
+      $('live').classList.add('stale');
+      toast('刷新失败：' + (error.message || error.code), true);
+    }
+  }
+
+  document.addEventListener('click', async (event) => {
+    const button = event.target.closest('button[data-act]');
+    if (!button) return;
+    const act = button.dataset.act;
+    try {
+      if (act === 'seat') {
+        await API(`/api/v1/floorplan/seat`, { method: 'POST', body: JSON.stringify({ reference: button.dataset.ref }) });
+        toast('已入座 ' + button.dataset.ref);
+      } else if (act === 'noshow') {
+        if (!confirm('确认把 ' + button.dataset.ref + ' 标为 no-show？')) return;
+        await API(`/api/v1/floorplan/no-show`, { method: 'POST', body: JSON.stringify({ reference: button.dataset.ref }) });
+        toast('已标记爽约，桌台进入待清理');
+      } else if (act === 'release') {
+        await API(`/api/v1/floorplan/release`, { method: 'POST', body: JSON.stringify({ table_id: Number(button.dataset.table), date: currentDate }) });
+        toast('桌台已释放');
+      }
+      refresh();
+    } catch (error) {
+      toast((error.message || '操作失败') + (error.code ? '（' + error.code + '）' : ''), true);
+    }
+  });
+
+  // ---- 电话预订 ----
+  $('check-avail').addEventListener('click', async () => {
+    const date = $('b-date').value || currentDate;
+    const time = $('b-time').value || '19:00';
+    const party = $('b-party').value || 2;
+    try {
+      const data = await API(`/api/v1/availability?restaurant_id=1&date=${date}&time=${time}&party_size=${party}`);
+      const select = $('b-table');
+      select.innerHTML = data.tables.map((table) =>
+        `<option value="${table.id}">${table.code} · ${table.seats} 座 · ${table.area}</option>`
+      ).join('');
+      $('avail-list').textContent = `可用 ${data.tables.length} 张桌（${data.service_period ? data.service_period.name : '—'}）`;
+      toast('查询完成：' + data.tables.length + ' 张空桌');
+    } catch (error) {
+      toast(error.message || '查询失败', true);
+    }
+  });
+
+  $('create-booking').addEventListener('click', async () => {
+    const payload = {
+      restaurant_id: 1,
+      table_id: Number($('b-table').value || 0),
+      date: $('b-date').value || currentDate,
+      time: $('b-time').value || '19:00',
+      party_size: Number($('b-party').value || 2),
+      name: $('b-name').value.trim(),
+      email: $('b-email').value.trim(),
+      channel: 'phone',
+    };
+    if (!payload.table_id) { toast('请先查空桌并选择桌位', true); return; }
+    if (!payload.name || !payload.email) { toast('请填写客人姓名与邮箱', true); return; }
+    try {
+      const result = await API('/api/v1/bookings', { method: 'POST', body: JSON.stringify(payload) });
+      $('book-out').hidden = false;
+      $('book-out').textContent = JSON.stringify({
+        reference: result.booking.reference,
+        table: result.booking.table.code,
+        when: result.booking.date + ' ' + result.booking.start + '–' + result.booking.end,
+        cutoff: result.booking.cutoff_at,
+        created: result.created,
+      }, null, 2);
+      toast('订位成功：' + result.booking.reference);
+      refresh();
+    } catch (error) {
+      toast(error.message || '创建失败', true);
+      if (error.details) $('book-out').textContent = JSON.stringify(error.details, null, 2);
+    }
+  });
+
+  // ---- 报表 ----
+  $('load-occ').addEventListener('click', async () => {
+    try {
+      const data = await API(`/api/v1/reports/occupancy?restaurant_id=1&from=${currentDate}&to=${currentDate}`, { headers: adminHeaders() });
+      $('report-out').hidden = false;
+      $('report-out').textContent = JSON.stringify({ capacity_per_day: data.capacity_per_day, totals: data.totals, day: data.days[0] }, null, 2);
+      toast('已加载当日占用报表');
+    } catch (error) {
+      toast(error.message || '需要管理令牌', true);
+    }
+  });
+
+  $('load-risk').addEventListener('click', async () => {
+    try {
+      const data = await API(`/api/v1/reports/risk?restaurant_id=1&from=${currentDate}&to=${currentDate}`);
+      $('report-out').hidden = false;
+      $('report-out').textContent = JSON.stringify({
+        scored_bookings: data.scored_bookings,
+        average_score: data.average_score,
+        distribution: data.distribution,
+        flagged: data.flagged,
+      }, null, 2);
+      toast('已加载风险报表');
+    } catch (error) {
+      toast(error.message || '加载失败', true);
+    }
+  });
+
+  // ---- 候补 ----
+  $('join-wait').addEventListener('click', async () => {
+    const payload = {
+      restaurant_id: 1,
+      date: $('b-date').value || currentDate,
+      time: $('w-time').value || '19:00',
+      party_size: Number($('w-party').value || 2),
+      name: $('w-name').value.trim(),
+      email: $('w-email').value.trim(),
+    };
+    if (!payload.name || !payload.email) { toast('请填写姓名与邮箱', true); return; }
+    try {
+      const result = await API('/api/v1/waitlist', { method: 'POST', body: JSON.stringify(payload) });
+      $('wait-out').hidden = false;
+      $('wait-out').textContent = JSON.stringify({ entry: result.entry.id, position: result.position, status: result.entry.status }, null, 2);
+      toast('已加入候补队列，第 ' + result.position + ' 位');
+    } catch (error) {
+      toast(error.message || '加入失败', true);
+    }
+  });
+
+  // ---- tabs ----
+  document.querySelectorAll('.tabs button').forEach((button) => {
+    button.addEventListener('click', () => {
+      document.querySelectorAll('.tabs button').forEach((b) => b.classList.toggle('active', b === button));
+      const tab = button.dataset.tab;
+      $('tab-book').hidden = tab !== 'book';
+      $('tab-report').hidden = tab !== 'report';
+      $('tab-wait').hidden = tab !== 'wait';
+    });
+  });
+
+  // ---- filters ----
+  $('date').addEventListener('change', () => {
+    currentDate = $('date').value || todayISO();
+    $('b-date').value = currentDate;
+    refresh();
+  });
+  $('time').addEventListener('change', () => {
+    currentTime = $('time').value || '19:00';
+    refresh();
+  });
+  $('refresh').addEventListener('click', refresh);
+
+  // ---- boot ----
+  currentDate = todayISO();
+  $('date').value = currentDate;
+  $('b-date').value = currentDate;
+  refresh();
+  setInterval(() => { if (!document.hidden) refresh(); }, 5000);
+})();
+</script>
+</body>
+</html>
