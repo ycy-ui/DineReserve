@@ -387,10 +387,11 @@ final class PilotService
         $placeholders = implode(',', array_fill(0, max(1, count($created)), '?'));
         $found = $this->pdo->prepare('SELECT COUNT(*) FROM bookings WHERE reference IN (' . $placeholders . ')');
         $found->execute($created === [] ? ['__none__'] : $created);
+        $foundCount = (int) $found->fetchColumn();
         $invariants[] = [
             'name' => 'every created booking exists exactly once',
-            'ok' => (int) $found->fetchColumn() === count($created),
-            'detail' => (int) $found->fetchColumn() . '/' . count($created),
+            'ok' => $foundCount === count($created),
+            'detail' => $foundCount . '/' . count($created),
         ];
 
         // 7. Notifications are all accounted for.
@@ -405,10 +406,11 @@ final class PilotService
             'SELECT COUNT(*) FROM booking_events e JOIN bookings b ON b.id = e.booking_id WHERE b.booking_date = ?'
         );
         $events->execute([$date]);
+        $eventCount = (int) $events->fetchColumn();
         $invariants[] = [
             'name' => 'every booking change left an event',
-            'ok' => (int) $events->fetchColumn() > 0,
-            'detail' => (int) $events->fetchColumn() . ' event(s)',
+            'ok' => $eventCount > 0,
+            'detail' => $eventCount . ' event(s)',
         ];
 
         return $invariants;
