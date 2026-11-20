@@ -72,6 +72,8 @@
   .hint { font-size: 11.5px; color: #6b8078; line-height: 1.55; }
   code { font-family: Consolas, Menlo, monospace; background: var(--green-soft); padding: 1px 5px; border-radius: 4px; font-size: .94em; }
 
+  .token-box { margin: 2px 0; }
+  .token-box summary { font-size: 12px; color: #5e766e; cursor: pointer; padding: 4px 0; }
   footer { padding: 18px 34px 26px; color: #6b8078; font-size: 12px; text-align: center; }
   footer a { color: var(--ink-2); text-decoration: none; border-bottom: 1px dashed #b9c9c1; }
 </style>
@@ -118,13 +120,25 @@
       </ul>
       <div class="actions">
         <div class="field">
-          <label for="token">管理令牌（部署时由管理员配置）</label>
-          <input id="token" type="password" placeholder="X-Admin-Token" autocomplete="current-password">
+          <label for="email">商家账号</label>
+          <input id="email" type="email" placeholder="manager@dinereserve.local" autocomplete="username" value="manager@dinereserve.local">
+        </div>
+        <div class="field">
+          <label for="password">密码</label>
+          <input id="password" type="password" placeholder="DemoPass123!" autocomplete="current-password">
         </div>
         <div class="error" id="error"></div>
-        <button class="btn" id="enter-merchant">进入商家端 →</button>
+        <button class="btn" id="login-merchant">登录并进入商家端 →</button>
+        <details class="token-box">
+          <summary>没有商家账号？使用部署令牌</summary>
+          <div class="field" style="margin-top:8px">
+            <label for="token">部署令牌（X-Admin-Token）</label>
+            <input id="token" type="password" placeholder="dev-admin-token">
+          </div>
+          <button class="btn ghost" id="enter-merchant" type="button">用令牌进入 →</button>
+        </details>
         <a class="btn ghost" href="host.html?mode=demo">离线演示（无需 API）→</a>
-        <span class="hint">本地演示默认令牌 <code>dev-admin-token</code>；上线前必须修改 <code>ADMIN_TOKEN</code>。没有启动 PHP 服务时（例如 GitHub Pages），请用离线演示：数据保存在本机浏览器，规则与引擎一致。</span>
+        <span class="hint">演示账号：<code>manager@dinereserve.local</code> / <code>DemoPass123!</code>（前台 host 账号同理）。登录后会拿到 8 小时有效的会话令牌，商家端用 <code>Authorization: Bearer …</code> 调用商家 API。没有启动 PHP 服务时（例如 GitHub Pages），请用离线演示。</span>
       </div>
     </section>
   </div>
@@ -139,48 +153,74 @@
 <script>
 (() => {
   const error = document.getElementById('error');
-  const input = document.getElementById('token');
-  const button = document.getElementById('enter-merchant');
+  const emailInput = document.getElementById('email');
+  const passwordInput = document.getElementById('password');
+  const loginButton = document.getElementById('login-merchant');
+  const tokenInput = document.getElementById('token');
+  const tokenButton = document.getElementById('enter-merchant');
 
-  // Allow ?token=… so a bookmark or the deployment can pre-fill it.
   const fromUrl = new URLSearchParams(location.search).get('token');
-  if (fromUrl) input.value = fromUrl;
+  if (fromUrl) tokenInput.value = fromUrl;
 
-  const go = async () => {
-    const token = input.value.trim();
+  const goOffline = (message) => {
+    error.textContent = message + '，正在进入离线演示模式…';
+    setTimeout(() => { location.href = 'host.html?mode=demo'; }, 900);
+  };
+
+  const login = async () => {
     error.textContent = '';
-    if (!token) {
-      error.textContent = '请输入商家管理令牌。';
+    const email = emailInput.value.trim();
+    const password = passwordInput.value;
+    if (!email || !password) {
+      error.textContent = '请输入商家账号和密码。';
       return;
     }
-    button.disabled = true;
+    loginButton.disabled = true;
     try {
-      const response = await fetch('/api/v1/admin/users', {
-        headers: { 'X-Admin-Token': token },
+      const response = await fetch('/api/v1/admin/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
       });
+      const body = await response.json().catch(() => null);
       if (response.status === 401) {
-        error.textContent = '令牌不正确，请向管理员索取。';
+        error.textContent = (body && body.error && body.error.message) || '账号或密码不正确。';
         return;
       }
-      if (!response.ok) {
-        error.textContent = '没有可用的 API（' + response.status + '），正在进入离线演示模式…';
-        setTimeout(() => { location.href = 'host.html?mode=demo'; }, 900);
+      if (!response.ok || !body || !body.token) {
+        error.textContent = '商家 API 不可用（' + response.status + '）。';
         return;
       }
-      location.href = 'host.html?token=' + encodeURIComponent(token);
+      location.href = 'host.html?session=' + encodeURIComponent(body.token);
     } catch (e) {
-      error.textContent = '未检测到 API，正在进入离线演示模式…';
-      setTimeout(() => { location.href = 'host.html?mode=demo'; }, 900);
-      return;
+      goOffline('未检测到 API');
     } finally {
-      button.disabled = false;
+      loginButton.disabled = false;
     }
   };
 
-  button.addEventListener('click', go);
-  input.addEventListener('keydown', (event) => {
-    if (event.key === 'Enter') go();
-  });
+  const useToken = async () => {
+    const token = tokenInput.value.trim();
+    error.textContent = '';
+    if (!token) { error.textContent = '请输入部署令牌。'; return; }
+    tokenButton.disabled = true;
+    try {
+      const response = await fetch('/api/v1/admin/me', {
+        headers: { 'X-Admin-Token': token },
+      });
+      if (response.status === 401) { error.textContent = '令牌不正确。'; return; }
+      if (!response.ok) { goOffline('商家 API 不可用（' + response.status + '）'); return; }
+      location.href = 'host.html?token=' + encodeURIComponent(token);
+    } catch (e) {
+      goOffline('未检测到 API');
+    } finally {
+      tokenButton.disabled = false;
+    }
+  };
+
+  loginButton.addEventListener('click', login);
+  passwordInput.addEventListener('keydown', (event) => { if (event.key === 'Enter') login(); });
+  tokenButton.addEventListener('click', useToken);
 })();
 </script>
 </body>

@@ -119,6 +119,12 @@ The diner demo is plain HTML/JS — just open `demo.html` in a browser, no serve
 | W12 | **REQ-1.9** users / roles / policy settings + the 27 non-functional requirements (latency budgets, security baseline, backup & restore, capacity) | `src/AdminService.php`, `bin/admin.php`, `bin/bench.php`, `bin/security-check.php`, `docs/08-nfr-validation.md` | ✅ |
 | W13 | **Pilot** one dinner service rehearsed end-to-end (bookings, waitlist offers, seating, walk-in, no-show, notifications, report, backup) + **code freeze** and v1.0-rc checklist | `src/PilotService.php`, `bin/pilot.php`, `tests/PilotTest.php`, `docs/09-pilot-runbook.md`, `docs/10-code-freeze.md` | ✅ |
 
+**Merchant login.** `POST /api/v1/admin/login` (demo accounts `manager@dinereserve.local` /
+`host@dinereserve.local` / `admin@dinereserve.local`, password `DemoPass123!`) returns an 8-hour
+bearer session; the merchant API accepts `Authorization: Bearer …` and derives capabilities from the
+user's strongest role. `GET /api/v1/admin/me` returns the caller, `POST /api/v1/admin/logout` signs out.
+The deployment token (`X-Admin-Token`) still works for scripts and CI.
+
 **Entry page** (`login.html`): choose the role before anything else — **diner** (no login, opens
 `demo.html`) or **merchant** (enter the admin token, opens `host.html` with the token pre-filled and
 validated through `GET /api/v1/admin/users`). The host console is a zero-build front-desk page:
