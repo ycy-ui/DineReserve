@@ -55,6 +55,32 @@ reminders; staff see the floor plan, check parties in, mark no-shows and read oc
 | Staff time on booking calls | several hours a day | **less than half** |
 | Booking page response | not measurable | **< 2 s** |
 
+## Run it locally as a server (deployment)
+
+`scripts/serve.sh` runs the whole app — static pages **and** the API — from this checkout.
+It listens on `0.0.0.0:8080`, so phones and tablets on the same Wi-Fi can use the host
+console during a service rehearsal.
+
+```bash
+scripts/serve.sh start      # start (seeds the SQLite demo database on first run)
+scripts/serve.sh status     # PID + /api/v1/health
+scripts/serve.sh logs       # tail the server log
+scripts/serve.sh stop       # stop
+scripts/serve.sh install    # launchd agent: start at login, restart if it crashes
+scripts/serve.sh uninstall  # remove the agent
+```
+
+- URLs: `http://127.0.0.1:8080/` (project site), `/login.html` (entry), `/host.html`
+  (merchant console), `/demo.html` (diner), `/api/v1/health` (API).
+- The PHP binary is looked up as `PHP_BIN`, then `~/.local/dinereserve/php`, then `php`
+  (PHP 8.1+ with `pdo_sqlite`).
+- The launchd agent (`com.dinereserve.server`) runs the same command with `KeepAlive`
+  and logs to `~/Library/Logs/DineReserve.log`.
+- Admin token: `dev-admin-token` locally; set `ADMIN_TOKEN` in the deployment
+  environment for anything shared.
+- This is a single-machine deployment for demos/pilot rehearsal. For a real restaurant,
+  run the same code behind Apache/Nginx + PHP-FPM (TastyIgniter host) with MySQL.
+
 ## Quick start (local)
 
 ```bash
