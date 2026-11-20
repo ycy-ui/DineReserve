@@ -95,9 +95,15 @@ The diner demo is plain HTML/JS — just open `demo.html` in a browser, no serve
 
 **Entry page** (`login.html`): choose the role before anything else — **diner** (no login, opens
 `demo.html`) or **merchant** (enter the admin token, opens `host.html` with the token pre-filled and
-validated through `GET /api/v1/admin/users`). The host console is a zero-build front-desk page on top of
-the API — live floor plan with 5 s polling, seat / no-show / release, phone booking, waitlist entry and
-the daily occupancy / risk reports. Local demo token: `dev-admin-token`.
+validated through `GET /api/v1/admin/users`). The host console is a zero-build front-desk page:
+live floor plan with 5 s polling, seat / no-show / release, phone booking, waitlist entry and the daily
+occupancy / risk reports. Local demo token: `dev-admin-token`.
+
+**Offline demo mode.** GitHub Pages has no PHP runtime, so `host.html` probes `/api/v1/health` and, when no
+API answers, switches to a browser-only data layer (`assets/host/host-demo.js`) that reuses the diner demo
+engine and keeps its state in `localStorage`. The console behaves the same (floor plan, seat, no-show,
+release, phone booking, waitlist, occupancy and risk reports) and shows an "离线演示模式" banner with a
+**重试连接 API** button. Force it with `host.html?mode=demo`; force the real API with `?mode=live`.
 
 | W14 | **v1.0.0 release** — pilot findings triaged, docs finalised (release notes + user guide), clean-checkout verification, tag and release | `docs/11-release-notes-v1.0.md`, `docs/12-user-guide.md`, CHANGELOG 1.0.0 | ✅ |
 
