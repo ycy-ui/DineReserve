@@ -55,6 +55,26 @@ reminders; staff see the floor plan, check parties in, mark no-shows and read oc
 | Staff time on booking calls | several hours a day | **less than half** |
 | Booking page response | not measurable | **< 2 s** |
 
+## macOS app (double-click)
+
+`scripts/build-macos-app.sh` packages the whole product into a self-contained
+`DineReserve.app`: the static front-end, the PHP engine **and** the PHP CLI binary.
+
+```bash
+scripts/build-macos-app.sh        # -> dist/DineReserve.app + dist/DineReserve-macOS.zip
+open dist/DineReserve.app         # double-click equivalent
+```
+
+- The app starts its own server on `127.0.0.1:8317` (or the next free port), seeds the
+  database under `~/Library/Application Support/DineReserve/` on first run, opens
+  `login.html` in the default browser and keeps the server alive while the app runs
+  (restarts it if it ever stops answering).
+- Sign in as `manager@dinereserve.local` / `DemoPass123!` (or `admin@…`, `host@…`).
+- Quit the app to stop the server. The bundle is ad-hoc signed, so on first launch
+  Gatekeeper may ask for **right-click → Open**.
+- The app is deliberately not committed (`dist/`); build it locally, or share
+  `dist/DineReserve-macOS.zip` (~13 MB).
+
 ## Run it locally as a server (deployment)
 
 `scripts/serve.sh` runs the whole app — static pages **and** the API — from this checkout.
