@@ -183,6 +183,7 @@ final class PilotService
         $summary = [
             'date' => $date,
             'bookings_created' => count($created),
+            'references' => $created,
             'cancelled' => count($cancelled),
             'waitlist_entries' => count($waitlistEntries),
             'offers' => count($offers),

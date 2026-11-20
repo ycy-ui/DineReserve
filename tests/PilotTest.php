@@ -42,11 +42,19 @@ final class PilotTest extends TestCase
     public function testEveryCreatedBookingStillExistsOnce(): void
     {
         $result = $this->runPilot();
-        $bookings = (int) $this->pdo->query(
+
+        self::assertCount($result['summary']['bookings_created'], $result['summary']['references']);
+        $statement = $this->pdo->prepare('SELECT COUNT(*) FROM bookings WHERE reference = ?');
+        foreach ($result['summary']['references'] as $reference) {
+            $statement->execute([$reference]);
+            self::assertSame(1, (int) $statement->fetchColumn(), 'reference ' . $reference . ' must exist exactly once');
+        }
+
+        // The waitlist conversion and the walk-in add rows of their own on the same date.
+        $onDate = (int) $this->pdo->query(
             "SELECT COUNT(*) FROM bookings WHERE booking_date = '" . PilotService::PILOT_DATE . "'"
         )->fetchColumn();
-
-        self::assertSame($result['summary']['bookings_created'], $bookings);
+        self::assertGreaterThanOrEqual($result['summary']['bookings_created'], $onDate);
     }
 
     public function testTheServiceNeverDoubleBooksATable(): void
