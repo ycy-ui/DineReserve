@@ -235,6 +235,17 @@ jobs:
           php bin/security-check.php
           php bin/bench.php --iterations=30
 
+      - name: Pilot rehearsal (W13)
+        run: |
+          set -euo pipefail
+          if [ ! -f src/PilotService.php ]; then
+            echo "Pilot not implemented yet (arrives in W13) - rehearsal skipped."
+            exit 0
+          fi
+          php bin/pilot.php --db=storage/pilot.sqlite --backup=storage/pilot-backup.sqlite --report=storage/pilot-record.md
+          test -s storage/pilot-record.md
+          echo "pilot rehearsal OK"
+
   mysql:
     name: MySQL 8.0 · schema + seed
     runs-on: ubuntu-latest
