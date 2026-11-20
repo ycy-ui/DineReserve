@@ -429,6 +429,8 @@
   $('refresh').addEventListener('click', refresh);
 
   // ---- boot ----
+  const presetToken = new URLSearchParams(location.search).get('token');
+  if (presetToken) $('token').value = presetToken;
   currentDate = todayISO();
   $('date').value = currentDate;
   $('b-date').value = currentDate;

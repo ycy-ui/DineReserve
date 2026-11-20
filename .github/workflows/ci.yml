@@ -324,7 +324,7 @@ jobs:
           import sys, xml.dom.minidom
           from html.parser import HTMLParser
 
-          for name in ["index.html", "demo.html", "host.html"]:
+          for name in ["index.html", "demo.html", "host.html", "login.html"]:
               try:
                   HTMLParser().feed(open(name, encoding="utf-8").read())
                   print(f"OK {name}")
@@ -340,7 +340,7 @@ jobs:
       - name: Ensure the demo has no external dependencies
         run: |
           set -euo pipefail
-          if grep -nE '<(script|link|img|source)[^>]*(src|href)="https?://' demo.html index.html host.html 2>/dev/null; then
+          if grep -nE '<(script|link|img|source)[^>]*(src|href)="https?://' demo.html index.html host.html login.html 2>/dev/null; then
             echo "external resources are not allowed in the static demo"; exit 1
           fi
           echo "no external resources"

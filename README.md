@@ -93,9 +93,11 @@ The diner demo is plain HTML/JS — just open `demo.html` in a browser, no serve
 | W12 | **REQ-1.9** users / roles / policy settings + the 27 non-functional requirements (latency budgets, security baseline, backup & restore, capacity) | `src/AdminService.php`, `bin/admin.php`, `bin/bench.php`, `bin/security-check.php`, `docs/08-nfr-validation.md` | ✅ |
 | W13 | **Pilot** one dinner service rehearsed end-to-end (bookings, waitlist offers, seating, walk-in, no-show, notifications, report, backup) + **code freeze** and v1.0-rc checklist | `src/PilotService.php`, `bin/pilot.php`, `tests/PilotTest.php`, `docs/09-pilot-runbook.md`, `docs/10-code-freeze.md` | ✅ |
 
-**Host console** (`host.html`): a zero-build front-desk page on top of the API — live floor plan with
-5 s polling, seat / no-show / release, phone booking, waitlist entry, daily occupancy and risk reports.
-Open `http://127.0.0.1:8080/host.html` next to `demo.html`.
+**Entry page** (`login.html`): choose the role before anything else — **diner** (no login, opens
+`demo.html`) or **merchant** (enter the admin token, opens `host.html` with the token pre-filled and
+validated through `GET /api/v1/admin/users`). The host console is a zero-build front-desk page on top of
+the API — live floor plan with 5 s polling, seat / no-show / release, phone booking, waitlist entry and
+the daily occupancy / risk reports. Local demo token: `dev-admin-token`.
 
 | W14 | **v1.0.0 release** — pilot findings triaged, docs finalised (release notes + user guide), clean-checkout verification, tag and release | `docs/11-release-notes-v1.0.md`, `docs/12-user-guide.md`, CHANGELOG 1.0.0 | ✅ |
 
