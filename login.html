@@ -123,7 +123,8 @@
         </div>
         <div class="error" id="error"></div>
         <button class="btn" id="enter-merchant">进入商家端 →</button>
-        <span class="hint">本地演示默认令牌 <code>dev-admin-token</code>；上线前必须修改 <code>ADMIN_TOKEN</code>。</span>
+        <a class="btn ghost" href="host.html?mode=demo">离线演示（无需 API）→</a>
+        <span class="hint">本地演示默认令牌 <code>dev-admin-token</code>；上线前必须修改 <code>ADMIN_TOKEN</code>。没有启动 PHP 服务时（例如 GitHub Pages），请用离线演示：数据保存在本机浏览器，规则与引擎一致。</span>
       </div>
     </section>
   </div>
@@ -162,12 +163,15 @@
         return;
       }
       if (!response.ok) {
-        error.textContent = '服务暂时不可用（' + response.status + '），请稍后再试。';
+        error.textContent = '没有可用的 API（' + response.status + '），正在进入离线演示模式…';
+        setTimeout(() => { location.href = 'host.html?mode=demo'; }, 900);
         return;
       }
       location.href = 'host.html?token=' + encodeURIComponent(token);
     } catch (e) {
-      error.textContent = '无法连接 API：' + (e && e.message ? e.message : '网络错误');
+      error.textContent = '未检测到 API，正在进入离线演示模式…';
+      setTimeout(() => { location.href = 'host.html?mode=demo'; }, 900);
+      return;
     } finally {
       button.disabled = false;
     }
